@@ -1,0 +1,39 @@
+name: Create Production Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Package and Release
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Zip Extension Files
+        run: |
+          zip -r ig-relations-analyzer.zip src manifest.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ig-relations-analyzer.zip
+          name: Release ${{ github.ref_name }}
+          body: |
+            Automated Release for version ${{ github.ref_name }}.
+            
+            ### How to install:
+            1. Download `ig-relations-analyzer.zip` below.
+            2. Extract it anywhere on your computer.
+            3. Go to `chrome://extensions/` in Chrome.
+            4. Enable **Developer mode** (top right).
+            5. Click **Load unpacked** and select the extracted folder.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
