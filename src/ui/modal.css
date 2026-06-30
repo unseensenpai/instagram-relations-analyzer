@@ -1,0 +1,240 @@
+#ig-relations-float-trigger {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999999;
+  background-color: #0095f6;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s ease;
+}
+
+#ig-relations-float-trigger:hover {
+  background-color: #1877f2;
+}
+
+#ig-relations-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 999999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.ig-relations-hidden {
+  display: none !important;
+}
+
+.ig-relations-modal-window {
+  background-color: #1c1c1e;
+  color: #f5f5f7;
+  width: 850px;
+  height: 600px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border: 1px solid #3a3a3c;
+}
+
+.ig-relations-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #3a3a3c;
+}
+
+.ig-relations-modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+#ig-relations-close-btn {
+  background: none;
+  border: none;
+  color: #aeaeae;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+#ig-relations-close-btn:hover {
+  color: #ffffff;
+}
+
+.ig-relations-modal-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.ig-relations-sidebar {
+  width: 260px;
+  background-color: #121214;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-right: 1px solid #3a3a3c;
+}
+
+.btn-primary {
+  background-color: #0095f6;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #1877f2;
+}
+
+.ig-relations-sidebar hr {
+  border: 0;
+  border-top: 1px solid #3a3a3c;
+  margin: 8px 0;
+}
+
+.btn-filter {
+  background: none;
+  border: none;
+  color: #aeaeae;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-filter:hover, .btn-filter.active {
+  background-color: #2c2c2e;
+  color: #ffffff;
+}
+
+.btn-filter.danger:hover, .btn-filter.danger.active {
+  background-color: rgba(255, 69, 58, 0.2);
+  color: #ff453a;
+}
+
+.ig-relations-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: #1c1c1e;
+  display: flex;
+  flex-direction: column;
+}
+
+#ig-relations-status-message {
+  color: #aeaeae;
+  text-align: center;
+  margin-top: 40px;
+  font-size: 14px;
+}
+
+.status-warning {
+  color: #ff9500 !important;
+  background-color: rgba(255, 149, 0, 0.1);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 149, 0, 0.3);
+  margin: 20px auto;
+  max-width: 80%;
+}
+
+.ig-cache-info {
+  font-size: 11px;
+  color: #8e8e93;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.ig-spinner {
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border-left-color: #0095f6;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+  display: none;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#ig-relations-user-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ig-user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #2c2c2e;
+  border-radius: 8px;
+}
+
+.ig-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.ig-username {
+  font-weight: 600;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.ig-username:hover {
+  text-decoration: underline;
+}
+
+.ig-fullname {
+  font-size: 12px;
+  color: #aeaeae;
+}
+
+.btn-unfollow {
+  background-color: #3a3a3c;
+  color: #ff453a;
+  border: 1px solid #48484a;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-unfollow:hover {
+  background-color: #ff453a;
+  color: white;
+}

@@ -1,0 +1,26 @@
+<div id="ig-relations-modal-overlay" class="ig-relations-hidden">
+  <div class="ig-relations-modal-window">
+    <div class="ig-relations-modal-header">
+      <h2 id="ig-relations-title">IG Relations Analyzer</h2>
+      <button id="ig-relations-close-btn">&times;</button>
+    </div>
+
+    <div class="ig-relations-modal-body">
+      <div class="ig-relations-sidebar">
+        <button id="btn-fetch-data" class="btn-primary">Sync Target Profile</button>
+        <div id="ig-cache-timestamp" class="ig-cache-info"></div>
+        <hr />
+        <button id="filter-following" class="btn-filter active">Following (<span id="cnt-following">0</span>)</button>
+        <button id="filter-followers" class="btn-filter">Followers (<span id="cnt-followers">0</span>)</button>
+        <button id="filter-not-following-back" class="btn-filter danger">Not Following Back (<span id="cnt-not-back">0</span>)</button>
+        <button id="filter-i-not-following-back" class="btn-filter">You Don't Follow Back (<span id="cnt-i-not-back">0</span>)</button>
+      </div>
+
+      <div class="ig-relations-content">
+        <div id="ig-relations-spinner" class="ig-spinner"></div>
+        <div id="ig-relations-status-message">Please open any profile page and click 'Sync Target Profile'...</div>
+        <ul id="ig-relations-user-list"></ul>
+      </div>
+    </div>
+  </div>
+</div>
