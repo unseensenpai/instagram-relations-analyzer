@@ -12,13 +12,39 @@
         <hr />
         <button id="filter-following" class="btn-filter active">Following (<span id="cnt-following">0</span>)</button>
         <button id="filter-followers" class="btn-filter">Followers (<span id="cnt-followers">0</span>)</button>
-        <button id="filter-not-following-back" class="btn-filter danger">Not Following Back (<span id="cnt-not-back">0</span>)</button>
-        <button id="filter-i-not-following-back" class="btn-filter">You Don't Follow Back (<span id="cnt-i-not-back">0</span>)</button>
+        <button id="filter-not-following-back" class="btn-filter danger">Not Following Back (<span
+            id="cnt-not-back">0</span>)</button>
+        <button id="filter-i-not-following-back" class="btn-filter">You Don't Follow Back (<span
+            id="cnt-i-not-back">0</span>)</button>
       </div>
 
       <div class="ig-relations-content">
         <div id="ig-relations-spinner" class="ig-spinner"></div>
         <div id="ig-relations-status-message">Please open any profile page and click 'Sync Target Profile'...</div>
+
+        <!-- Dışa Aktarma Bölümü (Yenilenmiş Modern Action Bar) -->
+        <div class="ig-relations-export-container"
+          style="display: flex; gap: 10px; margin-bottom: 20px; padding: 4px 0; justify-content: flex-end; align-items: center;">
+          <span style="color: #a8a8a8; font-size: 12px; font-weight: 500; margin-right: auto;">Export List:</span>
+          <div style="position: relative; display: inline-block;">
+            <select id="ig-relations-export-type"
+              style="padding: 8px 32px 8px 12px; border-radius: 6px; border: 1px solid #363636; font-size: 13px; background: #262626; color: #f5f5f5; cursor: pointer; appearance: none; -webkit-appearance: none; font-weight: 500; min-width: 220px; transition: border-color 0.2s;">
+              <option value="current-csv" style="background: #262626; color: #f5f5f5;">This List (Excel / CSV)</option>
+              <option value="current-json" style="background: #262626; color: #f5f5f5;">This List (JSON)</option>
+              <option value="all-json" style="background: #262626; color: #f5f5f5;">Full Profile Data (JSON)</option>
+            </select>
+            <!-- Custom dropdown oku -->
+            <div
+              style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #a8a8a8; pointer-events: none; font-size: 10px;">
+              ▼</div>
+          </div>
+          <button id="btn-export-data"
+            style="background-color: #0095f6; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; transition: background-color 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
+            onmouseover="this.style.backgroundColor='#1877f2'" onmouseout="this.style.backgroundColor='#0095f6'">
+            Download
+          </button>
+        </div>
+
         <ul id="ig-relations-user-list"></ul>
       </div>
     </div>

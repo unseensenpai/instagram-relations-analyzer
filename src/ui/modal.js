@@ -4,13 +4,8 @@ const CONFIG = {
   targetUsername: ''
 };
 
-let dataStore = {
-  followers: [],
-  following: [],
-  notFollowingBack: [],
-  iNotFollowingBack: []
-};
-
+// Her profilin verisini ayırmak için ana depo yapısı
+let profileCaches = {};
 let currentFilterKey = 'following';
 
 document.getElementById('ig-relations-close-btn').addEventListener('click', () => {
@@ -34,18 +29,26 @@ document.getElementById('btn-fetch-data').addEventListener('click', async () => 
   }
 
   setLoading(true);
-  clearLists();
+  clearCurrentProfileList();
+
+  // Aktif profil için boş bir veri yapısı oluştur veya sıfırla
+  profileCaches[CONFIG.targetUserId] = {
+    followers: [],
+    following: [],
+    notFollowingBack: [],
+    iNotFollowingBack: []
+  };
 
   updateStatus(`Syncing @${CONFIG.targetUsername}'s following list...`);
-  dataStore.following = await fetchAllRelations('following');
+  profileCaches[CONFIG.targetUserId].following = await fetchAllRelations('following');
 
   updateStatus(`Syncing @${CONFIG.targetUsername}'s followers list...`);
-  dataStore.followers = await fetchAllRelations('followers');
+  profileCaches[CONFIG.targetUserId].followers = await fetchAllRelations('followers');
 
-  processRelations();
-  saveCacheData();
+  processRelations(CONFIG.targetUserId);
+  saveCacheData(CONFIG.targetUserId);
   
-  renderList(dataStore[currentFilterKey]);
+  renderList(profileCaches[CONFIG.targetUserId][currentFilterKey]);
   updateUIElements();
   
   setLoading(false);
@@ -151,19 +154,22 @@ async function fetchAllRelations(type) {
   return list;
 }
 
-function processRelations() {
-  const followerIds = new Set(dataStore.followers.map(u => u.pk));
-  const followingIds = new Set(dataStore.following.map(u => u.pk));
+function processRelations(userId) {
+  const currentCache = profileCaches[userId];
+  if (!currentCache) return;
 
-  dataStore.notFollowingBack = dataStore.following.filter(u => !followerIds.has(u.pk));
-  dataStore.iNotFollowingBack = dataStore.followers.filter(u => !followingIds.has(u.pk));
+  const followerIds = new Set(currentCache.followers.map(u => u.pk));
+  const followingIds = new Set(currentCache.following.map(u => u.pk));
+
+  currentCache.notFollowingBack = currentCache.following.filter(u => !followerIds.has(u.pk));
+  currentCache.iNotFollowingBack = currentCache.followers.filter(u => !followingIds.has(u.pk));
 }
 
-function saveCacheData() {
-  const cacheKey = `ig_cache_${CONFIG.targetUserId}`;
+function saveCacheData(userId) {
+  const cacheKey = `ig_cache_${userId}`;
   const cacheObject = {
     timestamp: new Date().toLocaleString(),
-    dataStore: dataStore
+    dataStore: profileCaches[userId]
   };
   localStorage.setItem(cacheKey, JSON.stringify(cacheObject));
 }
@@ -174,10 +180,12 @@ function loadCachedData() {
   
   if (cachedData) {
     const cached = JSON.parse(cachedData);
-    dataStore = cached.dataStore;
+    // Hafızadaki profileCaches havuzuna ilgili ID'yi kaydediyoruz
+    profileCaches[CONFIG.targetUserId] = cached.dataStore;
+    
     document.getElementById('ig-cache-timestamp').innerText = `Last synced: ${cached.timestamp}`;
-    processRelations();
-    renderList(dataStore[currentFilterKey]);
+    processRelations(CONFIG.targetUserId);
+    renderList(profileCaches[CONFIG.targetUserId][currentFilterKey]);
     updateUIElements();
   } else {
     resetUI();
@@ -185,23 +193,35 @@ function loadCachedData() {
   }
 }
 
-function clearLists() {
-  dataStore = { followers: [], following: [], notFollowingBack: [], iNotFollowingBack: [] };
+function clearCurrentProfileList() {
+  if (CONFIG.targetUserId && profileCaches[CONFIG.targetUserId]) {
+    profileCaches[CONFIG.targetUserId] = { followers: [], following: [], notFollowingBack: [], iNotFollowingBack: [] };
+  }
   updateUIElements();
   document.getElementById('ig-relations-user-list').innerHTML = '';
 }
 
 function resetUI() {
-  clearLists();
+  document.getElementById('ig-relations-user-list').innerHTML = '';
+  document.getElementById('cnt-following').innerText = '0';
+  document.getElementById('cnt-followers').innerText = '0';
+  document.getElementById('cnt-not-back').innerText = '0';
+  document.getElementById('cnt-i-not-back').innerText = '0';
   document.getElementById('ig-cache-timestamp').innerText = '';
 }
 
 function updateUIElements() {
   updateStatus('');
-  document.getElementById('cnt-following').innerText = dataStore.following.length;
-  document.getElementById('cnt-followers').innerText = dataStore.followers.length;
-  document.getElementById('cnt-not-back').innerText = dataStore.notFollowingBack.length;
-  document.getElementById('cnt-i-not-back').innerText = dataStore.iNotFollowingBack.length;
+  const currentCache = profileCaches[CONFIG.targetUserId];
+  
+  if (currentCache) {
+    document.getElementById('cnt-following').innerText = currentCache.following.length;
+    document.getElementById('cnt-followers').innerText = currentCache.followers.length;
+    document.getElementById('cnt-not-back').innerText = currentCache.notFollowingBack.length;
+    document.getElementById('cnt-i-not-back').innerText = currentCache.iNotFollowingBack.length;
+  } else {
+    resetUI();
+  }
 }
 
 function renderList(users) {
@@ -260,8 +280,8 @@ async function handleUnfollow(buttonElement, userId) {
 
     if (response.ok) {
       removeUserFromLocalStore('following', userId);
-      processRelations();
-      saveCacheData();
+      processRelations(CONFIG.targetUserId);
+      saveCacheData(CONFIG.targetUserId);
       buttonElement.closest('.ig-user-item').remove();
       updateUIElements();
     } else {
@@ -295,8 +315,8 @@ async function handleRemoveFollower(buttonElement, userId) {
 
     if (response.ok) {
       removeUserFromLocalStore('followers', userId);
-      processRelations();
-      saveCacheData();
+      processRelations(CONFIG.targetUserId);
+      saveCacheData(CONFIG.targetUserId);
       buttonElement.closest('.ig-user-item').remove();
       updateUIElements();
     } else {
@@ -311,7 +331,10 @@ async function handleRemoveFollower(buttonElement, userId) {
 }
 
 function removeUserFromLocalStore(storeKey, userId) {
-  dataStore[storeKey] = dataStore[storeKey].filter(u => u.pk !== userId && u.pk.toString() !== userId.toString());
+  const currentCache = profileCaches[CONFIG.targetUserId];
+  if (currentCache && currentCache[storeKey]) {
+    currentCache[storeKey] = currentCache[storeKey].filter(u => u.pk !== userId && u.pk.toString() !== userId.toString());
+  }
 }
 
 const filters = [
@@ -332,6 +355,83 @@ filters.forEach(filter => {
     
     targetElement.classList.add('active');
     currentFilterKey = filter.dataKey;
-    renderList(dataStore[currentFilterKey]);
+    
+    const currentCache = profileCaches[CONFIG.targetUserId];
+    if (currentCache) {
+      renderList(currentCache[currentFilterKey]);
+    }
   });
 });
+
+// Dışa aktarma butonuna tıklama olayını dinle
+document.getElementById('btn-export-data').addEventListener('click', () => {
+  const currentCache = profileCaches[CONFIG.targetUserId];
+  if (!currentCache) {
+    alert('İndirilecek veri bulunamadı. Lütfen önce profili senkronize edin.');
+    return;
+  }
+
+  const exportType = document.getElementById('ig-relations-export-type').value;
+  const currentListName = currentFilterKey; // 'following', 'notFollowingBack' vb.
+  const currentUsers = currentCache[currentListName] || [];
+
+  if ((exportType === 'current-csv' || exportType === 'current-json') && currentUsers.length === 0) {
+    alert('Şu an açık olan listede indirilecek kullanıcı yok.');
+    return;
+  }
+
+  const dateStr = new Date().toISOString().slice(0, 10);
+
+  if (exportType === 'current-csv') {
+    // Excel ile tam uyumlu (UTF-8 BOM ile birlikte) CSV oluşturma
+    let csvContent = '\uFEFF'; // Türkçe karakterlerin Excel'de düzgün görünmesi için BOM
+    csvContent += 'Instagram ID,Kullanıcı Adı,Tam Adı\n';
+    
+    currentUsers.forEach(user => {
+      const fullName = (user.full_name || '').replace(/"/g, '""'); // Tırnak işaretlerini escape et
+      csvContent += `"${user.pk}","${user.username}","${fullName}"\n`;
+    });
+
+    downloadBlob(csvContent, `ig-${CONFIG.targetUsername}-${currentListName}-${dateStr}.csv`, 'text/csv;charset=utf-8;');
+  } 
+  
+  else if (exportType === 'current-json') {
+    const jsonContent = JSON.stringify(currentUsers, null, 2);
+    downloadBlob(jsonContent, `ig-${CONFIG.targetUsername}-${currentListName}-${dateStr}.json`, 'application/json');
+  } 
+  
+  else if (exportType === 'all-json') {
+    // Takipçi, takip edilen ve filtrelenmiş tüm listeleri tek JSON'da paketle
+    const allDataContent = JSON.stringify({
+      target_username: CONFIG.targetUsername,
+      target_id: CONFIG.targetUserId,
+      exported_at: new Date().toLocaleString(),
+      summary: {
+        following_count: currentCache.following.length,
+        followers_count: currentCache.followers.length,
+        not_following_back_count: currentCache.notFollowingBack.length,
+        i_not_following_back_count: currentCache.iNotFollowingBack.length
+      },
+      details: currentCache
+    }, null, 2);
+
+    downloadBlob(allDataContent, `ig-${CONFIG.targetUsername}-all-data-${dateStr}.json`, 'application/json');
+  }
+});
+
+// Tarayıcıya dosyayı indirtmek için yardımcı fonksiyon
+function downloadBlob(content, filename, contentType) {
+  const blob = new Blob([content], { type: contentType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  
+  // Temizlik
+  setTimeout(() => {
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }, 0);
+}
