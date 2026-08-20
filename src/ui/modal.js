@@ -1,3 +1,5 @@
+import { LANGUAGES, initLanguage, getLanguage, setLanguage, t } from './i18n.js';
+
 const CONFIG = {
   appId: '936619743392459',
   targetUserId: null,
@@ -7,52 +9,199 @@ const CONFIG = {
 // Her profilin verisini ayırmak için ana depo yapısı
 let profileCaches = {};
 let currentFilterKey = 'following';
+let isSyncing = false;
+let currentSearchTerm = '';
+// Ekranda gösterilen son senkronizasyon zamanı; dil değişince
+// etiketi yeniden çevirebilmek için ham hâliyle saklanır.
+let lastSyncedTimestamp = '';
+
+const searchInput = document.getElementById('ig-relations-search');
+
+// Arama kutusunu ve terimi sıfırlar (listeyi yeniden çizmez)
+function clearSearch() {
+  searchInput.value = '';
+  currentSearchTerm = '';
+}
+
+initLanguage();
+setupLanguageSelector();
+applyTranslations();
+
+// data-i18n* işaretli tüm elemanları aktif dile göre yeniden yazar.
+// Dinamik metinler (durum mesajları, liste içeriği) ilgili yerlerde
+// t() ile üretildiği için burada ele alınmaz.
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    el.title = t(el.dataset.i18nTitle);
+  });
+
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+
+  // Başlık, profil seçiliyse kullanıcı adını da içerir
+  document.getElementById('ig-relations-title').textContent = CONFIG.targetUsername
+    ? t('app.titleWithUser', { username: CONFIG.targetUsername })
+    : t('app.title');
+
+  // Sync butonu senkronizasyon sırasında farklı metin gösterir
+  document.getElementById('btn-fetch-data').textContent = isSyncing
+    ? t('sidebar.syncing')
+    : t('sidebar.sync');
+}
+
+function setupLanguageSelector() {
+  const select = document.getElementById('ig-relations-language');
+
+  LANGUAGES.forEach(({ code, label }) => {
+    const option = document.createElement('option');
+    option.value = code;
+    option.textContent = label;
+    select.appendChild(option);
+  });
+
+  select.value = getLanguage();
+
+  select.addEventListener('change', () => {
+    setLanguage(select.value);
+    applyTranslations();
+    // Liste öğelerindeki aksiyon butonları da çevrilmeli
+    rerenderCurrentList();
+    refreshCacheTimestamp();
+  });
+}
 
 document.getElementById('ig-relations-close-btn').addEventListener('click', () => {
+  if (isSyncing && !confirm(t('confirm.closeWhileSyncing'))) {
+    return;
+  }
   document.getElementById('ig-relations-modal-overlay').classList.add('ig-relations-hidden');
 });
 
-document.getElementById('ig-relations-float-trigger').addEventListener('click', () => {
-  if (detectTargetProfile()) {
-    document.getElementById('ig-relations-title').innerText = `Relations: @${CONFIG.targetUsername}`;
-    loadCachedData();
-  } else {
-    resetUI();
-    updateStatus('Please navigate to a valid Instagram profile page to begin analysis.', true);
+// Modalın aç/kapa'sını (toggle) content.js'deki floating buton yönetiyor.
+// O tıklama anında overlay henüz görünür/gizli hangi duruma geçecek bilemeyiz
+// (iki script bağımsız listener'lara sahip, sıra garantisi yok), bu yüzden
+// burada butona değil, overlay'in "hidden" class değişimine abone oluyoruz.
+// Overlay gizliden görünüre geçtiği her an güncel profile göre cache'i tazeleriz.
+const modalOverlay = document.getElementById('ig-relations-modal-overlay');
+let wasHidden = modalOverlay.classList.contains('ig-relations-hidden');
+new MutationObserver(() => {
+  const isHidden = modalOverlay.classList.contains('ig-relations-hidden');
+  if (wasHidden && !isHidden) {
+    // Modal az önce açıldı; profil değişmiş olabilir, arama sıfırlanır
+    clearSearch();
+
+    if (detectTargetProfile()) {
+      document.getElementById('ig-relations-title').textContent =
+        t('app.titleWithUser', { username: CONFIG.targetUsername });
+      loadCachedData();
+    } else {
+      resetUI();
+      updateStatus(t('status.invalidProfile'), true);
+    }
   }
-});
+  wasHidden = isHidden;
+}).observe(modalOverlay, { attributes: true, attributeFilter: ['class'] });
 
 document.getElementById('btn-fetch-data').addEventListener('click', async () => {
+  if (isSyncing) return;
+
   if (!detectTargetProfile()) {
-    updateStatus('Invalid profile page. Please open a profile to sync.', true);
+    updateStatus(t('status.invalidProfileSync'), true);
     return;
   }
 
+  isSyncing = true;
   setLoading(true);
-  clearCurrentProfileList();
+  // Not: burada eski profileCaches/localStorage verisini bilerek silmiyoruz.
+  // Sync bir sayfa navigasyonu (SPA route değişimi, F5, vb.) yüzünden
+  // yarıda kesilirse content script'in tüm state'i sıfırdan kurulur; eski
+  // veriyi önceden silseydik, yarım kalan senkronizasyon hem yeni veriyi
+  // hem de daha önce başarıyla kaydedilmiş cache'i kaybettirirdi.
+  // Ekranı geçici olarak temizliyoruz, ama gerçek veri sync başarıyla
+  // bitene kadar hem bellekte hem localStorage'da olduğu gibi kalıyor.
+  document.getElementById('ig-relations-user-list').innerHTML = '';
+  clearSearch();
 
-  // Aktif profil için boş bir veri yapısı oluştur veya sıfırla
-  profileCaches[CONFIG.targetUserId] = {
+  const workingData = {
     followers: [],
     following: [],
     notFollowingBack: [],
     iNotFollowingBack: []
   };
 
-  updateStatus(`Syncing @${CONFIG.targetUsername}'s following list...`);
-  profileCaches[CONFIG.targetUserId].following = await fetchAllRelations('following');
+  // Profil başlığındaki "takip"/"takipçi" sayıları, ilerlemeyi yüzde
+  // olarak gösterebilmek için okunur. Bulunamazsa sadece çekilen sayı
+  // gösterilir (yüzde/tahmin atlanır).
+  const totals = readProfileTotals();
 
-  updateStatus(`Syncing @${CONFIG.targetUsername}'s followers list...`);
-  profileCaches[CONFIG.targetUserId].followers = await fetchAllRelations('followers');
+  try {
+    const following = await fetchAllRelations('following', totals.following);
+    if (following === null) return;
 
-  processRelations(CONFIG.targetUserId);
-  saveCacheData(CONFIG.targetUserId);
-  
-  renderList(profileCaches[CONFIG.targetUserId][currentFilterKey]);
-  updateUIElements();
-  
-  setLoading(false);
+    const followers = await fetchAllRelations('followers', totals.followers);
+    if (followers === null) return;
+
+    workingData.following = following;
+    workingData.followers = followers;
+    profileCaches[CONFIG.targetUserId] = workingData;
+
+    updateStatus(t('status.comparing'));
+    processRelations(CONFIG.targetUserId);
+
+    updateStatus(t('status.saving'));
+    const saved = saveCacheData(CONFIG.targetUserId);
+
+    updateStatus(t('status.rendering', { count: workingData[currentFilterKey].length }));
+    // Tarayıcının yukarıdaki mesajı boyamasına fırsat veriyoruz; aksi
+    // halde büyük listelerde render bitene kadar ekran donmuş görünüyor.
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    renderList(workingData[currentFilterKey]);
+    updateUIElements();
+
+    if (!saved) {
+      updateStatus(t('error.cacheSaveFailed'), true);
+    }
+  } finally {
+    isSyncing = false;
+    setLoading(false);
+  }
 });
+
+// Instagram profil başlığındaki takipçi/takip sayılarını okumaya çalışır.
+// Bulunamazsa ilgili alan null döner; ilerleme göstergesi buna göre
+// yüzde göstermeden sadece çekilen sayıyı yazar.
+function readProfileTotals() {
+  const totals = { followers: null, following: null };
+
+  const followersLink = document.querySelector(`a[href*="/followers"]`);
+  const followingLink = document.querySelector(`a[href*="/following"]`);
+
+  totals.followers = parseCountFromElement(followersLink);
+  totals.following = parseCountFromElement(followingLink);
+
+  return totals;
+}
+
+function parseCountFromElement(element) {
+  if (!element) return null;
+
+  // Önce title attribute'una bakıyoruz: Instagram tam sayıyı orada
+  // tutuyor ("1.234"), görünen metin ise kısaltılmış olabiliyor ("1,2 B").
+  const titled = element.querySelector('[title]');
+  const raw = titled?.getAttribute('title') || element.innerText || '';
+
+  const digits = raw.replace(/[^0-9]/g, '');
+  if (!digits) return null;
+
+  const value = parseInt(digits, 10);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
 
 function detectTargetProfile() {
   const path = window.location.pathname.replace(/^\/|\/$/g, '');
@@ -63,7 +212,7 @@ function detectTargetProfile() {
   }
 
   CONFIG.targetUsername = path;
-  
+
   const scripts = document.querySelectorAll('script');
   for (let script of scripts) {
     if (script.innerText.includes('profilePage_')) {
@@ -106,18 +255,60 @@ function setLoading(isLoading) {
   if (isLoading) {
     spinner.style.display = 'block';
     btn.disabled = true;
-    btn.innerText = 'Syncing...';
+    btn.textContent = t('sidebar.syncing');
   } else {
     spinner.style.display = 'none';
     btn.disabled = false;
-    btn.innerText = 'Sync Relations';
+    btn.textContent = t('sidebar.sync');
   }
 }
 
-async function fetchAllRelations(type) {
+// Sayfalar arası zorunlu bekleme (ms). Instagram'ın hız limitine
+// takılmamak için düşürülmemeli.
+const PAGE_DELAY_MS = 1500;
+
+// "Takipçiler çekiliyor... 275 / 430 (%64) — tahmini kalan ~25 sn"
+function buildProgressMessage(label, fetchedCount, expectedTotal, hasMore) {
+  if (!hasMore) {
+    return t('status.fetchDone', { label, count: fetchedCount });
+  }
+
+  if (!expectedTotal || fetchedCount > expectedTotal) {
+    return t('status.fetchProgressNoTotal', { label, count: fetchedCount });
+  }
+
+  const percent = Math.min(99, Math.round((fetchedCount / expectedTotal) * 100));
+  const remaining = Math.max(0, expectedTotal - fetchedCount);
+  const pageSize = Math.max(1, fetchedCount);
+  // Kalan sayfa sayısı × (istek süresi + bekleme). İstek süresini
+  // ortalama 0.5 sn kabul ediyoruz.
+  const remainingPages = Math.ceil(remaining / pageSize);
+  const etaSeconds = Math.round(remainingPages * (PAGE_DELAY_MS + 500) / 1000);
+
+  const eta = etaSeconds >= 60
+    ? t('eta.minutes', { value: Math.ceil(etaSeconds / 60) })
+    : t('eta.seconds', { value: etaSeconds });
+
+  return t('status.fetchProgress', {
+    label,
+    count: fetchedCount,
+    total: expectedTotal,
+    percent,
+    eta
+  });
+}
+
+// Başarıyla tamamlanırsa tam listeyi, herhangi bir hata/engel durumunda
+// `null` döner. `null`, çağıranın kısmi veriyi cache'e yazmasını
+// engellemek için kullanılan açık bir sinyaldir — asla sessizce
+// yutulmamalı ya da boş dizi ile karıştırılmamalıdır.
+async function fetchAllRelations(type, expectedTotal = null) {
+  const label = type === 'following' ? t('filter.following') : t('filter.followers');
   let list = [];
   let nextMaxId = '';
   let hasMore = true;
+
+  updateStatus(t('status.fetching', { label }));
 
   while (hasMore) {
     const url = `https://www.instagram.com/api/v1/friendships/${CONFIG.targetUserId}/${type}/?count=50&max_id=${nextMaxId}`;
@@ -128,27 +319,47 @@ async function fetchAllRelations(type) {
           'X-Requested-With': 'XMLHttpRequest'
         }
       });
-      
-      if (response.status === 400 || response.status === 403) {
-        updateStatus('Private profile or action blocked by Instagram. Cannot access list.', true);
-        return [];
+
+      if (response.status === 429) {
+        updateStatus(t('error.rateLimit'), true);
+        return null;
       }
 
-      const data = await response.json();
-      
+      if (response.status === 400 || response.status === 403) {
+        updateStatus(t('error.privateOrBlocked'), true);
+        return null;
+      }
+
+      if (!response.ok) {
+        updateStatus(t('error.unexpectedStatus', { status: response.status }), true);
+        return null;
+      }
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseErr) {
+        console.error('IG Relations: failed to parse response as JSON', parseErr);
+        updateStatus(t('error.badResponse'), true);
+        return null;
+      }
+
       if (data.users) {
         list = list.concat(data.users);
       }
-      
+
       nextMaxId = data.next_max_id || '';
       hasMore = !!nextMaxId;
 
+      updateStatus(buildProgressMessage(label, list.length, expectedTotal, hasMore));
+
       if (hasMore) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, PAGE_DELAY_MS));
       }
     } catch (err) {
-      console.error(err);
-      hasMore = false;
+      console.error('IG Relations: network error while fetching', type, err);
+      updateStatus(t('error.network', { type: label }), true);
+      return null;
     }
   }
   return list;
@@ -165,13 +376,68 @@ function processRelations(userId) {
   currentCache.iNotFollowingBack = currentCache.followers.filter(u => !followingIds.has(u.pk));
 }
 
+// Cache'e yazarken API'den gelen ham kullanıcı nesnesinin tamamını değil,
+// sadece ihtiyacımız olan alanları saklıyoruz. Ham nesne profile_pic_url
+// gibi çok uzun alanlar içeriyor ve büyük profillerde localStorage'ın
+// ~5MB kotasını aşarak QuotaExceededError'a yol açıyordu.
+function slimUser(user) {
+  return {
+    pk: user.pk,
+    username: user.username,
+    full_name: user.full_name || ''
+  };
+}
+
 function saveCacheData(userId) {
   const cacheKey = `ig_cache_${userId}`;
+  const dataStore = profileCaches[userId];
+
+  lastSyncedTimestamp = new Date().toLocaleString();
+  refreshCacheTimestamp();
+
   const cacheObject = {
-    timestamp: new Date().toLocaleString(),
-    dataStore: profileCaches[userId]
+    timestamp: lastSyncedTimestamp,
+    dataStore: {
+      followers: dataStore.followers.map(slimUser),
+      following: dataStore.following.map(slimUser),
+      notFollowingBack: dataStore.notFollowingBack.map(slimUser),
+      iNotFollowingBack: dataStore.iNotFollowingBack.map(slimUser)
+    }
   };
-  localStorage.setItem(cacheKey, JSON.stringify(cacheObject));
+
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify(cacheObject));
+    return true;
+  } catch (err) {
+    // Kota aşıldıysa: diğer profillerin cache'lerini temizleyip bir kez
+    // daha deniyoruz. Yine olmazsa kullanıcıyı bilgilendiriyoruz ama
+    // senkronizasyonun geri kalanını (ekrandaki liste) bozmuyoruz.
+    console.error('IG Relations: failed to write cache', err);
+
+    if (err.name === 'QuotaExceededError' || err.code === 22) {
+      pruneOtherProfileCaches(cacheKey);
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(cacheObject));
+        return true;
+      } catch (retryErr) {
+        console.error('IG Relations: cache write failed after pruning', retryErr);
+      }
+    }
+
+    return false;
+  }
+}
+
+// Bu profil dışındaki ig_cache_* kayıtlarını siler
+function pruneOtherProfileCaches(keepKey) {
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('ig_cache_') && key !== keepKey) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(key => localStorage.removeItem(key));
 }
 
 function loadCachedData() {
@@ -182,23 +448,23 @@ function loadCachedData() {
     const cached = JSON.parse(cachedData);
     // Hafızadaki profileCaches havuzuna ilgili ID'yi kaydediyoruz
     profileCaches[CONFIG.targetUserId] = cached.dataStore;
-    
-    document.getElementById('ig-cache-timestamp').innerText = `Last synced: ${cached.timestamp}`;
+
+    lastSyncedTimestamp = cached.timestamp;
+    refreshCacheTimestamp();
     processRelations(CONFIG.targetUserId);
     renderList(profileCaches[CONFIG.targetUserId][currentFilterKey]);
     updateUIElements();
   } else {
     resetUI();
-    updateStatus(`No cached data found for @${CONFIG.targetUsername}. Please sync relations.`);
+    updateStatus(t('status.noCache', { username: CONFIG.targetUsername }));
   }
 }
 
-function clearCurrentProfileList() {
-  if (CONFIG.targetUserId && profileCaches[CONFIG.targetUserId]) {
-    profileCaches[CONFIG.targetUserId] = { followers: [], following: [], notFollowingBack: [], iNotFollowingBack: [] };
-  }
-  updateUIElements();
-  document.getElementById('ig-relations-user-list').innerHTML = '';
+// "Son senkronizasyon: ..." etiketini aktif dile göre yazar
+function refreshCacheTimestamp() {
+  document.getElementById('ig-cache-timestamp').textContent = lastSyncedTimestamp
+    ? t('sidebar.lastSynced', { timestamp: lastSyncedTimestamp })
+    : '';
 }
 
 function resetUI() {
@@ -207,13 +473,15 @@ function resetUI() {
   document.getElementById('cnt-followers').innerText = '0';
   document.getElementById('cnt-not-back').innerText = '0';
   document.getElementById('cnt-i-not-back').innerText = '0';
-  document.getElementById('ig-cache-timestamp').innerText = '';
+  lastSyncedTimestamp = '';
+  refreshCacheTimestamp();
+  updateDownloadButtons();
 }
 
 function updateUIElements() {
   updateStatus('');
   const currentCache = profileCaches[CONFIG.targetUserId];
-  
+
   if (currentCache) {
     document.getElementById('cnt-following').innerText = currentCache.following.length;
     document.getElementById('cnt-followers').innerText = currentCache.followers.length;
@@ -222,7 +490,55 @@ function updateUIElements() {
   } else {
     resetUI();
   }
+
+  updateDownloadButtons();
 }
+
+// Boş listelerin indirme ikonlarını pasifleştirir ki kullanıcı boş
+// dosya indirmeye çalışmasın.
+function updateDownloadButtons() {
+  const currentCache = profileCaches[CONFIG.targetUserId];
+
+  document.querySelectorAll('.btn-download-list').forEach(btn => {
+    const users = currentCache ? currentCache[btn.dataset.list] : null;
+    btn.disabled = !users || users.length === 0;
+  });
+
+  document.getElementById('btn-export-data').disabled = !currentCache;
+}
+
+// Kullanıcı adı veya tam ad, arama terimini içeriyor mu?
+// Türkçe karakterler için locale-aware küçük harfe çevirme kullanılır
+// ("İ" -> "i" gibi durumlar İngilizce toLowerCase ile bozulabiliyor).
+function filterUsersBySearch(users) {
+  if (!currentSearchTerm) return users;
+
+  const term = currentSearchTerm.toLocaleLowerCase('tr');
+  return users.filter(user => {
+    const username = (user.username || '').toLocaleLowerCase('tr');
+    const fullName = (user.full_name || '').toLocaleLowerCase('tr');
+    return username.includes(term) || fullName.includes(term);
+  });
+}
+
+// Açık olan listeyi mevcut arama terimiyle yeniden çizer
+function rerenderCurrentList() {
+  const currentCache = profileCaches[CONFIG.targetUserId];
+  if (currentCache) {
+    renderList(currentCache[currentFilterKey]);
+  }
+}
+
+searchInput.addEventListener('input', () => {
+  currentSearchTerm = searchInput.value.trim();
+  rerenderCurrentList();
+});
+
+document.getElementById('ig-search-clear').addEventListener('click', () => {
+  clearSearch();
+  rerenderCurrentList();
+  searchInput.focus();
+});
 
 function renderList(users) {
   const listContainer = document.getElementById('ig-relations-user-list');
@@ -232,37 +548,71 @@ function renderList(users) {
     return;
   }
 
-  const isActionRemove = currentFilterKey === 'iNotFollowingBack';
-  const buttonText = isActionRemove ? 'Remove' : 'Unfollow';
+  // Arama kutusundaki terim, açık olan listeyi kullanıcı adı ve tam ad
+  // üzerinden daraltır. Filtreleme sadece görünümü etkiler; profileCaches
+  // içindeki gerçek veriye ve dışa aktarmaya dokunmaz.
+  const visibleUsers = filterUsersBySearch(users);
 
-  users.forEach(user => {
+  if (visibleUsers.length === 0) {
+    const emptyItem = document.createElement('li');
+    emptyItem.className = 'ig-search-empty';
+    emptyItem.textContent = t('search.noResults', { term: currentSearchTerm });
+    listContainer.appendChild(emptyItem);
+    return;
+  }
+
+  const isActionRemove = currentFilterKey === 'iNotFollowingBack';
+  const buttonText = isActionRemove ? t('action.remove') : t('action.unfollow');
+
+  // Büyük listelerde tek tek appendChild yerine fragment kullanıyoruz;
+  // böylece DOM'a tek seferde eklenip yeniden boyama (reflow) sayısı azalıyor.
+  const fragment = document.createDocumentFragment();
+
+  visibleUsers.forEach(user => {
     const li = document.createElement('li');
     li.className = 'ig-user-item';
 
-    li.innerHTML = `
-      <div class="ig-user-info">
-        <a href="https://instagram.com/${user.username}" target="_blank" class="ig-username">${user.username}</a>
-        <span class="ig-fullname">${user.full_name || ''}</span>
-      </div>
-      <button class="btn-action" data-id="${user.pk}">${buttonText}</button>
-    `;
+    // Kullanıcı adı ve tam ad Instagram'dan gelen serbest metin olduğu
+    // için innerHTML yerine textContent ile basılıyor.
+    const info = document.createElement('div');
+    info.className = 'ig-user-info';
 
-    const actionBtn = li.querySelector('.btn-action');
-    if (isActionRemove) {
-      actionBtn.className = 'btn-unfollow';
-      actionBtn.addEventListener('click', (e) => handleRemoveFollower(e.target, user.pk));
-    } else {
-      actionBtn.className = 'btn-unfollow';
-      actionBtn.addEventListener('click', (e) => handleUnfollow(e.target, user.pk));
-    }
+    const link = document.createElement('a');
+    link.className = 'ig-username';
+    link.href = `https://instagram.com/${encodeURIComponent(user.username)}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = user.username;
 
-    listContainer.appendChild(li);
+    const fullName = document.createElement('span');
+    fullName.className = 'ig-fullname';
+    fullName.textContent = user.full_name || '';
+
+    info.appendChild(link);
+    info.appendChild(fullName);
+
+    const actionBtn = document.createElement('button');
+    actionBtn.className = 'btn-unfollow';
+    actionBtn.textContent = buttonText;
+    actionBtn.addEventListener('click', () => {
+      if (isActionRemove) {
+        handleRemoveFollower(actionBtn, user.pk);
+      } else {
+        handleUnfollow(actionBtn, user.pk);
+      }
+    });
+
+    li.appendChild(info);
+    li.appendChild(actionBtn);
+    fragment.appendChild(li);
   });
+
+  listContainer.appendChild(fragment);
 }
 
 async function handleUnfollow(buttonElement, userId) {
   buttonElement.disabled = true;
-  buttonElement.innerText = 'Leaving...';
+  buttonElement.textContent = t('action.unfollowing');
 
   const url = `https://www.instagram.com/api/v1/friendships/destroy/${userId}/`;
   const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
@@ -286,18 +636,18 @@ async function handleUnfollow(buttonElement, userId) {
       updateUIElements();
     } else {
       buttonElement.disabled = false;
-      buttonElement.innerText = 'Unfollow';
+      buttonElement.textContent = t('action.unfollow');
     }
   } catch (err) {
     console.error(err);
     buttonElement.disabled = false;
-    buttonElement.innerText = 'Unfollow';
+    buttonElement.textContent = t('action.unfollow');
   }
 }
 
 async function handleRemoveFollower(buttonElement, userId) {
   buttonElement.disabled = true;
-  buttonElement.innerText = 'Removing...';
+  buttonElement.textContent = t('action.removing');
 
   const url = `https://www.instagram.com/api/v1/friendships/remove_follower/${userId}/`;
   const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
@@ -321,12 +671,12 @@ async function handleRemoveFollower(buttonElement, userId) {
       updateUIElements();
     } else {
       buttonElement.disabled = false;
-      buttonElement.innerText = 'Remove';
+      buttonElement.textContent = t('action.remove');
     }
   } catch (err) {
     console.error(err);
     buttonElement.disabled = false;
-    buttonElement.innerText = 'Remove';
+    buttonElement.textContent = t('action.remove');
   }
 }
 
@@ -345,62 +695,82 @@ const filters = [
 ];
 
 filters.forEach(filter => {
-  document.getElementById(filter.id).addEventListener('click', (e) => {
+  const filterButton = document.getElementById(filter.id);
+
+  filterButton.addEventListener('click', () => {
     document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
-    
-    let targetElement = e.target;
-    if (!targetElement.classList.contains('btn-filter')) {
-      targetElement = targetElement.closest('.btn-filter');
-    }
-    
-    targetElement.classList.add('active');
+    filterButton.classList.add('active');
     currentFilterKey = filter.dataKey;
-    
+
+    // Liste değişince arama sıfırlanır; önceki listede yazılan terimin
+    // yeni listede de uygulanması beklenmedik bir davranış olurdu.
+    clearSearch();
+
+    rerenderCurrentList();
+  });
+});
+
+// CSV bölüm başlıkları, dosyayı Excel'de açan kullanıcı okusun diye
+// aktif dilde yazılır. Dosya adlarında ise sabit İngilizce anahtarlar
+// kullanılır (dil değişse de dosya adları tutarlı kalsın).
+const EXPORT_LIST_KEYS = ['following', 'followers', 'notFollowingBack', 'iNotFollowingBack'];
+
+function getSelectedExportFormat() {
+  return document.getElementById('ig-relations-export-type').value; // 'csv' | 'json'
+}
+
+// Her filtrenin yanındaki ⬇ ikonu: sadece o listeyi, seçili formatta indirir
+document.querySelectorAll('.btn-download-list').forEach(btn => {
+  btn.addEventListener('click', () => {
     const currentCache = profileCaches[CONFIG.targetUserId];
-    if (currentCache) {
-      renderList(currentCache[currentFilterKey]);
+    if (!currentCache) {
+      alert(t('alert.noData'));
+      return;
+    }
+
+    const listName = btn.dataset.list;
+    const users = currentCache[listName] || [];
+    if (users.length === 0) {
+      alert(t('alert.emptyList'));
+      return;
+    }
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const baseName = `ig-${CONFIG.targetUsername}-${listName}-${dateStr}`;
+
+    if (getSelectedExportFormat() === 'csv') {
+      downloadBlob(buildUsersCsv(users), `${baseName}.csv`, 'text/csv;charset=utf-8;');
+    } else {
+      downloadBlob(JSON.stringify(users, null, 2), `${baseName}.json`, 'application/json');
     }
   });
 });
 
-// Dışa aktarma butonuna tıklama olayını dinle
+// "Tümünü İndir": dört listenin hepsini tek dosyada, seçili formatta
 document.getElementById('btn-export-data').addEventListener('click', () => {
   const currentCache = profileCaches[CONFIG.targetUserId];
   if (!currentCache) {
-    alert('İndirilecek veri bulunamadı. Lütfen önce profili senkronize edin.');
-    return;
-  }
-
-  const exportType = document.getElementById('ig-relations-export-type').value;
-  const currentListName = currentFilterKey; // 'following', 'notFollowingBack' vb.
-  const currentUsers = currentCache[currentListName] || [];
-
-  if ((exportType === 'current-csv' || exportType === 'current-json') && currentUsers.length === 0) {
-    alert('Şu an açık olan listede indirilecek kullanıcı yok.');
+    alert(t('alert.noData'));
     return;
   }
 
   const dateStr = new Date().toISOString().slice(0, 10);
+  const baseName = `ig-${CONFIG.targetUsername}-all-data-${dateStr}`;
 
-  if (exportType === 'current-csv') {
-    // Excel ile tam uyumlu (UTF-8 BOM ile birlikte) CSV oluşturma
-    let csvContent = '\uFEFF'; // Türkçe karakterlerin Excel'de düzgün görünmesi için BOM
-    csvContent += 'Instagram ID,Kullanıcı Adı,Tam Adı\n';
-    
-    currentUsers.forEach(user => {
-      const fullName = (user.full_name || '').replace(/"/g, '""'); // Tırnak işaretlerini escape et
-      csvContent += `"${user.pk}","${user.username}","${fullName}"\n`;
+  if (getSelectedExportFormat() === 'csv') {
+    // Her liste kendi başlığıyla, tek CSV dosyasında art arda bölümler
+    // halinde yazılır (Excel'de tek sayfada okunur; her bölüm kendi
+    // kolon başlıklarını taşır).
+    let csvContent = '﻿'; // Türkçe karakterlerin Excel'de düzgün görünmesi için BOM
+    EXPORT_LIST_KEYS.forEach((listName, index) => {
+      const users = currentCache[listName] || [];
+      if (index > 0) csvContent += '\n';
+      csvContent += `${t(`filter.${listName}`)} (${users.length})\n`;
+      csvContent += buildUsersCsv(users, { includeBom: false });
     });
 
-    downloadBlob(csvContent, `ig-${CONFIG.targetUsername}-${currentListName}-${dateStr}.csv`, 'text/csv;charset=utf-8;');
-  } 
-  
-  else if (exportType === 'current-json') {
-    const jsonContent = JSON.stringify(currentUsers, null, 2);
-    downloadBlob(jsonContent, `ig-${CONFIG.targetUsername}-${currentListName}-${dateStr}.json`, 'application/json');
-  } 
-  
-  else if (exportType === 'all-json') {
+    downloadBlob(csvContent, `${baseName}.csv`, 'text/csv;charset=utf-8;');
+  } else {
     // Takipçi, takip edilen ve filtrelenmiş tüm listeleri tek JSON'da paketle
     const allDataContent = JSON.stringify({
       target_username: CONFIG.targetUsername,
@@ -415,9 +785,24 @@ document.getElementById('btn-export-data').addEventListener('click', () => {
       details: currentCache
     }, null, 2);
 
-    downloadBlob(allDataContent, `ig-${CONFIG.targetUsername}-all-data-${dateStr}.json`, 'application/json');
+    downloadBlob(allDataContent, `${baseName}.json`, 'application/json');
   }
 });
+
+// Kullanıcı listesini Excel ile tam uyumlu CSV metnine çevirir.
+// `includeBom: false` verilirse BOM eklenmez (tek dosyada birden fazla
+// bölüm art arda birleştirilirken BOM sadece dosyanın en başında olmalı).
+function buildUsersCsv(users, { includeBom = true } = {}) {
+  let csvContent = includeBom ? '﻿' : '';
+  csvContent += `${t('export.headerId')},${t('export.headerUsername')},${t('export.headerFullName')}\n`;
+
+  users.forEach(user => {
+    const fullName = (user.full_name || '').replace(/"/g, '""'); // Tırnak işaretlerini escape et
+    csvContent += `"${user.pk}","${user.username}","${fullName}"\n`;
+  });
+
+  return csvContent;
+}
 
 // Tarayıcıya dosyayı indirtmek için yardımcı fonksiyon
 function downloadBlob(content, filename, contentType) {

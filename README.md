@@ -1,91 +1,140 @@
-# IG Relations - Follower Analyzer
+# IG Relations — Follower Analyzer
 
-[English version below](#english-version)
+**English** · [Türkçe](README.tr.md) · [Español](README.es.md)
 
-Instagram takipçilerinizi ve takip ettiklerinizi doğrudan tarayıcınız içinde, tamamen güvenli ve gizlilik odaklı olarak analiz etmenizi sağlayan hafif bir Chrome eklentisidir.
+A lightweight, privacy-focused Chrome extension that analyzes your Instagram followers and following lists entirely inside your browser. No servers, no accounts, no data leaves your machine.
 
-## Özellikler
-
-- **Hedef Profil Analizi:** Sadece kendi profilinizi değil, girdiğiniz herhangi bir arkadaşınızın (açık hesap veya takip ettiğiniz) profilini de analiz edebilirsiniz.
-- **Yerel Önbellek (Cache):** Verileri profile özel olarak tarayıcınızda (`localStorage`) saklar. Her açılışta sıfırdan çekmek yerine son senkronizasyon zamanını gösterir ve anında yüklenir.
-- **Karşılıklı Takip Kontrolü:** Sizi geri takip etmeyen kişileri anında listeleyin.
-- **Hayran (Fan) Kontrolü:** Sizin geri takip etmediğiniz kişileri görün.
-- **Doğrudan İşlemler (Unfollow / Remove):** Sizi takip etmeyenleri panelden **Unfollow** edebilir; sizin takip etmediğiniz kişileri ise **Remove** butonu ile takipçilerinizden çıkarabilirsiniz.
-- **Üçüncü Parti Sunucu Yok:** Verileriniz asla tarayıcınızdan dışarı çıkmaz, Instagram API'leri ile doğrudan sizin bilgisayarınız arasında akar.
-
-## Kurulum (Geliştirici Modu)
-
-1. Bu repoyu bilgisayarınıza klonlayın veya zip olarak indirin.
-2. Google Chrome'u açın ve `chrome://extensions/` adresine gidin.
-3. Sağ üst köşedeki **Geliştirici modu** (Developer mode) anahtarını aktif hale getirin.
-4. Sol üst köşedeki **Paketlenmemiş öğe yükle** (Load unpacked) butonuna tıklayın.
-5. Eklenti klasörünü (`ig-relations-extension`) seçerek yükleyin.
-
-> 🚀 **Alternatif Kolay Kurulum:** Reponun sağ tarafındaki **Releases** bölümünden otomatik paketlenmiş `.zip` dosyasını indirip klasöre çıkardıktan sonra Chrome'a doğrudan "Paketlenmemiş öğe yükle" diyerek tanıtabilirsiniz.
-
-## Nasıl Kullanılır?
-
-1. [Instagram](https://www.instagram.com) web sitesine gidin.
-2. Ekranın sağ üst köşesinde beliren **📊 IG Relations** butonunu bulun.
-3. Paneli açmak için butona tıklayın.
-4. O an açık olan profilin verilerini çekmek ve analiz etmek için **Sync Target Profile** butonuna basın.
+![version](https://img.shields.io/badge/version-1.1.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![license](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
-
-## English Version
-
-A lightweight, local, and privacy-focused Chrome Extension to analyze Instagram followers and following lists directly within your browser.
 
 ## Features
 
-- **Target Profile Analysis:** Analyze not just your own profile, but any friend's profile (as long as it's public or you follow them) that you are currently viewing.
-- **Local Cache:** Stores fetched data per user ID inside your browser's `localStorage`. Shows the last synced timestamp and loads instantly instead of fetching from scratch every time.
-- **Mutual Check:** Filter users who don't follow you back.
-- **Fans Check:** Filter users you don't follow back.
-- **Direct Actions (Unfollow / Remove):** Unfollow non-followers instantly or securely remove users who follow you (but you don't follow back) using the **Remove** button.
-- **No Third-Party Servers:** Your data never leaves your browser; it communicates directly with Instagram endpoints.
-
-## Installation
-
-1. Clone or download this repository to your local machine.
-2. Open Google Chrome and navigate to `chrome://extensions/`.
-3. Enable **Developer mode** using the toggle switch in the top right corner.
-4. Click the **Load unpacked** button in the top left corner.
-5. Select the `ig-relations-extension` root folder.
-
-> 🚀 **Alternative Quick Method:** You can download the pre-packaged release zip from the **Releases** section on the right, extract it, and load it directly via "Load unpacked".
-
-## How to Use
-
-1. Go to [Instagram](https://www.instagram.com).
-2. Look for the **📊 IG Relations** button at the top right corner of your screen.
-3. Click the button to open the dashboard.
-4. Click **Sync Target Profile** to fetch and analyze the current profile's connections.
+- **Analyze any profile** — Not just your own. Any public profile, or any private one you follow.
+- **Four relationship views**
+  - Following — everyone the profile follows
+  - Followers — everyone who follows the profile
+  - Not Following Back — people they follow who don't follow back
+  - You Don't Follow Back — followers they haven't followed back
+- **Live search** — Filter the open list instantly by username or full name.
+- **Direct actions** — Unfollow or remove followers straight from the panel.
+- **Export** — Download any single list, or all four at once, as Excel-ready CSV or JSON.
+- **Local cache** — Results are stored per profile in `localStorage`, so reopening a profile loads instantly and shows the last sync time.
+- **Multilingual** — English, Turkish and Spanish. Auto-detects your browser language; switchable from the panel.
+- **Progress feedback** — Live counter, percentage and estimated time while syncing.
+- **No third-party servers** — Requests go directly from your browser to Instagram.
 
 ---
 
-## Rate Limits & Safety Note / Hız Limitleri & Güvenlik Notu
+## Installation
 
-Instagram enforces strict rate limits on automated actions and pagination requests. To keep your account safe:
-- **Built-in Delays:** The extension includes a mandatory 1.5-second delay between pagination loops to reduce the risk of rate-limiting or action blocks.
-- **Action Control:** Avoid using the **Unfollow** or **Remove** buttons too rapidly in short successions. 
-- **Target Analysis Limit:** Analyzing external public profiles too frequently might trigger temporary endpoint restrictions from Instagram. Use the sync feature responsibly.
+### Option A — Download a release (recommended)
 
-*Instagram, otomasyon işlemleri ve sayfalama istekleri üzerinde katı hız limitleri uygular. Hesabınızı güvende tutmak için:*
-- *Eklenti, Instagram tarafından engellenme riskini azaltmak amacıyla sayfalama döngüleri arasına zorunlu 1.5 saniyelik gecikmeler koyar.*
-- *Unfollow veya Remove butonlarını arka arkaya çok hızlı kullanmaktan kaçının.*
-- *Dış profilleri çok sık senkronize etmek Instagram tarafında geçici kısıtlamalara yol açabilir. Özelliği sağduyulu kullanınız.*
+1. Go to the [Releases](../../releases) page and download `ig-relations-analyzer.zip` from the latest release.
+2. Extract the zip anywhere on your computer.
+3. Open Chrome and navigate to `chrome://extensions/`.
+4. Enable **Developer mode** (toggle in the top-right corner).
+5. Click **Load unpacked** and select the extracted folder.
 
-## Disclaimer / Sorumluluk Reddi
+### Option B — Clone the repository
 
-**This tool is for educational and personal analytical purposes only.** It is not affiliated with, authorized, maintained, sponsored, or endorsed by Instagram, Meta Platforms, Inc., or any of its affiliates or subsidiaries. 
+```bash
+git clone https://github.com/<your-username>/instagram-relations-analyzer.git
+```
 
-Automating interactions or scraping data from Instagram Web endpoints may violate Instagram's Terms of Service. By using this software, you acknowledge that you are doing so entirely **at your own risk**. The developer accepts no responsibility or liability for any account restrictions, temporary action blocks, suspensions, or data loss resulting from the use of this extension.
+Then follow steps 3–5 above, selecting the cloned folder.
 
-***Bu araç yalnızca eğitim ve kişisel analiz amaçlıdır.** Instagram, Meta Platforms, Inc. veya onun iştirakleri/bağlı ortaklıkları ile hiçbir ilişkisi yoktur, bunlar tarafından yetkilendirilmemiş, bakımı yapılmamış, desteklenmemiş veya onaylanmamıştır.*
+---
 
-*Instagram Web uç noktalarından veri çekmek veya etkileşimleri otomatize etmek Instagram Kullanım Koşullarını ihlal edebilir. Bu yazılımı kullanarak, tüm riskin **tamamen size ait olduğunu** kabul etmiş dahi olursunuz. Geliştirici, bu eklentinin kullanılmasından kaynaklanan herhangi bir hesap kısıtlaması, geçici engelleme, askıya alma veya veri kaybından dolayı hiçbir sorumluluk veya yükümlülük kabul etmez.*
+## Usage
 
-## License / Lisans
+1. Go to [instagram.com](https://www.instagram.com) and make sure you're logged in.
+2. Open any profile page (your own or someone else's).
+3. Click the **📊 IG Relations** button in the top-right corner of the page.
+4. Press **Sync Target Profile** and wait for the sync to finish — progress is shown live.
+5. Switch between the four lists in the sidebar, search within a list, or export your results.
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+> **Note:** Syncing a large profile takes time. The extension waits 1.5 seconds between requests to avoid Instagram's rate limits — a profile with 500 followers takes roughly 1–2 minutes.
+
+---
+
+## Export formats
+
+| Option | Output |
+|---|---|
+| **↓ next to a list** | That single list, in the selected format |
+| **↓ Download All** | All four lists in one file |
+| **Excel / CSV** | UTF-8 with BOM, opens correctly in Excel including non-English characters |
+| **JSON** | Structured data with a summary block, ideal for further processing |
+
+Exports always contain the **full list**, regardless of any active search filter.
+
+---
+
+## Privacy
+
+This extension makes requests **only** to `instagram.com`, using your existing browser session. It has no analytics, no telemetry, and no external endpoints. All results stay in your browser's `localStorage` and can be cleared at any time by clearing site data.
+
+Permissions requested:
+
+| Permission | Why |
+|---|---|
+| `activeTab` | Read the profile currently open in the tab |
+| `storage` | Save your language preference |
+| `https://*.instagram.com/*` | Call Instagram's own endpoints on your behalf |
+
+---
+
+## Rate limits & safety
+
+Instagram enforces strict limits on automated requests and actions. To keep your account safe:
+
+- A **1.5-second delay** between pagination requests is built in and should not be reduced.
+- Avoid clicking **Unfollow** or **Remove** rapidly in succession.
+- Syncing many external profiles in a short window may trigger temporary restrictions.
+
+If Instagram rate-limits you, the panel shows a clear message and stops — wait a few minutes before retrying.
+
+---
+
+## Troubleshooting
+
+**"No cached data found"** — This profile hasn't been synced yet. Press *Sync Target Profile*.
+
+**Sync stops with a storage warning** — The browser's storage quota is full. The extension automatically clears other profiles' caches and retries; if it still fails, the list stays visible on screen but won't persist after closing the panel.
+
+**"Private profile or action blocked"** — The profile is private and you don't follow it, or Instagram has temporarily blocked the request.
+
+**The panel button doesn't appear** — Refresh the Instagram tab. The extension injects itself on page load.
+
+---
+
+## Development
+
+```
+src/
+├── content.js        # Injects the panel into instagram.com
+└── ui/
+    ├── modal.html    # Panel markup
+    ├── modal.css     # Panel styles
+    ├── modal.js      # Panel logic: sync, compare, render, export
+    └── i18n.js       # Translations (en / tr / es)
+```
+
+**Adding a language:** add a block with the same keys to `TRANSLATIONS` in `src/ui/i18n.js` and register it in the `LANGUAGES` array. The panel picks it up automatically.
+
+Release notes live in [`docs/release-notes/`](docs/release-notes/).
+
+---
+
+## Disclaimer
+
+**This tool is for educational and personal analytical purposes only.** It is not affiliated with, authorized, maintained, sponsored, or endorsed by Instagram, Meta Platforms, Inc., or any of its affiliates or subsidiaries.
+
+Automating interactions with or scraping data from Instagram web endpoints may violate Instagram's Terms of Service. By using this software you acknowledge that you do so entirely **at your own risk**. The developer accepts no responsibility or liability for any account restrictions, temporary action blocks, suspensions, or data loss resulting from the use of this extension.
+
+---
+
+## License
+
+Released under the MIT License — see [LICENCE](LICENCE) for details.
