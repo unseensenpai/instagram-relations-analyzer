@@ -8,6 +8,24 @@ Instagram takipçilerinizi ve takip ettiklerinizi tamamen tarayıcınızın içi
 
 ---
 
+## Ekran Görüntüleri
+
+| Profil Analizi | Karşılaştırma ve Geçmiş |
+|---|---|
+| ![Profil Analizi](docs/screenshots/panel-overview.png) | ![Karşılaştırma ve Geçmiş](docs/screenshots/panel-compare.png) |
+
+---
+
+## Nasıl Çalışır?
+
+1. **Üç ayrı panel** — Üstteki sekmelerle **Profil Analizi** (canlı profil senkronizasyonu ve listeler), **Karşılaştır** (zaman içi değişim analizi) ve **Dosya Görüntüleyici** (dışa aktarılmış JSON/CSV dosyalarını çevrimdışı inceleme) arasında profilleri birbirine karıştırmadan geçiş yapın.
+2. **Güvenilir profil çözümleme** — Instagram SPA geçişlerinde veya `/reels/`, `/followers/` gibi alt sayfalarda URL'deki kullanıcı adını gerçek Instagram ID'sine çözümler; eski profilin önbelleği asla yeni profilde görünmez.
+3. **Tarayıcı içi geçmiş (`IndexedDB`)** — Her senkronizasyon yerel olarak saklanır (profil başına en fazla 20 kayıt). **Karşılaştır** sekmesindeki Geçmiş barından eski bir kaydı seçip **Yeni Takipçiler**, **Takibi Bırakanlar**, **Yeni Takip Edilenler**, **Takipten Çıkılanlar** ve **Kullanıcı Adı Değişenleri** anında görün.
+4. **Harici JSON ve CSV karşılaştırma** — Güncel profille kıyaslamak için **1 dosya**, ya da doğrudan çevrimdışı karşılaştırmak için **2 dosya birden** (JSON+JSON, CSV+CSV veya JSON+CSV) seçin; **Ters Çevir** ve **Farkı İndir** ile rapor alın.
+5. **Küçültülebilir sağ üst buton** — Instagram'daki **📊 IG Relations** butonunu yanındaki `›` düğmesiyle kenara yaslı küçük bir simgeye daraltabilirsiniz.
+
+---
+
 ## Özellikler
 
 - **Herhangi bir profili analiz edin** — Sadece kendi profilinizi değil; açık hesapları veya takip ettiğiniz gizli hesapları da.

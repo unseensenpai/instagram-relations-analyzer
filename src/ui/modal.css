@@ -1,23 +1,75 @@
-#ig-relations-float-trigger {
+#ig-relations-float-wrap {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 16px;
+  right: 16px;
   z-index: 999999;
+  display: flex;
+  align-items: stretch;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  transition: right 0.2s ease, opacity 0.2s ease, border-radius 0.2s ease;
+}
+
+#ig-relations-float-wrap.minimized {
+  right: 0;
+  border-radius: 8px 0 0 8px;
+  opacity: 0.78;
+}
+
+#ig-relations-float-wrap.minimized:hover {
+  opacity: 1;
+}
+
+#ig-relations-float-wrap.minimized .ig-float-label {
+  display: none;
+}
+
+#ig-relations-float-trigger {
   background-color: #0095f6;
   color: #ffffff;
   border: none;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding: 9px 12px;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 4px;
   transition: background-color 0.2s ease;
+}
+
+#ig-relations-float-wrap.minimized #ig-relations-float-trigger {
+  padding: 7px 8px;
+  font-size: 14px;
 }
 
 #ig-relations-float-trigger:hover {
   background-color: #1877f2;
+}
+
+#ig-relations-float-minimize {
+  background-color: #0077cc;
+  color: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+#ig-relations-float-wrap.minimized #ig-relations-float-minimize {
+  padding: 0 6px;
+}
+
+#ig-relations-float-minimize:hover {
+  background-color: #005fa3;
+  color: #ffffff;
 }
 
 #ig-relations-modal-overlay {
@@ -57,14 +109,61 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  gap: 12px;
+  padding: 14px 20px;
   border-bottom: 1px solid #3a3a3c;
 }
 
 .ig-relations-modal-header h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+.ig-panel-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #121214;
+  border: 1px solid #3a3a3c;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.ig-panel-tab {
+  background: none;
+  border: none;
+  color: #aeaeae;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.ig-panel-tab:hover {
+  color: #ffffff;
+  background-color: #2c2c2e;
+}
+
+.ig-panel-tab.active {
+  background-color: #0095f6;
+  color: #ffffff;
+}
+
+.ig-sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
 }
 
 #ig-relations-close-btn {
@@ -178,7 +277,8 @@
 }
 
 .btn-download-list,
-.btn-download-compare {
+.btn-download-compare,
+.btn-download-viewer {
   background: none;
   border: none;
   color: #8e8e93;
@@ -193,19 +293,22 @@
 }
 
 .btn-download-list:hover,
-.btn-download-compare:hover {
+.btn-download-compare:hover,
+.btn-download-viewer:hover {
   background-color: #2c2c2e;
   color: #0095f6;
 }
 
 .btn-download-list:disabled,
-.btn-download-compare:disabled {
+.btn-download-compare:disabled,
+.btn-download-viewer:disabled {
   opacity: 0.3;
   cursor: default;
 }
 
 .btn-download-list:disabled:hover,
-.btn-download-compare:disabled:hover {
+.btn-download-compare:disabled:hover,
+.btn-download-viewer:disabled:hover {
   background: none;
   color: #6e6e73;
 }
@@ -458,15 +561,17 @@
   flex-direction: column;
 }
 
-.ig-username {
+.ig-username,
+.ig-username:visited {
   font-weight: 600;
-  color: #ffffff;
+  color: #ffffff !important;
   text-decoration: none;
   font-size: 14px;
 }
 
 .ig-username:hover {
   text-decoration: underline;
+  color: #64b5f6 !important;
 }
 
 .ig-fullname {

@@ -17,6 +17,16 @@ const TRANSLATIONS = {
     'app.title': 'IG Relations Analyzer',
     'app.titleWithUser': 'İlişkiler: @{username}',
 
+    'tab.analysis': 'Profil Analizi',
+    'tab.compare': 'Karşılaştır',
+    'tab.viewer': 'Dosya Görüntüleyici',
+
+    'viewer.openFile': '📁 Dosya Aç (JSON / CSV)',
+    'viewer.empty': 'İncelemek için daha önce dışa aktardığın bir JSON veya CSV dosyası seç.',
+    'viewer.loadedInfo': 'Dosya: {name}',
+    'compare.emptyPrompt': 'Yukarıdaki geçmişten bir kayıt seç veya 1–2 JSON/CSV dosyası yükleyerek değişimleri gör.',
+    'compare.pickFiles': '📁 1 veya 2 Dosya Seç (JSON/CSV)',
+
     'sidebar.sync': 'Profili Senkronize Et',
     'sidebar.syncing': 'Senkronize ediliyor...',
     'sidebar.lastSynced': 'Son senkronizasyon: {timestamp}',
@@ -114,6 +124,16 @@ const TRANSLATIONS = {
     'app.title': 'IG Relations Analyzer',
     'app.titleWithUser': 'Relations: @{username}',
 
+    'tab.analysis': 'Profile Analysis',
+    'tab.compare': 'Compare',
+    'tab.viewer': 'File Viewer',
+
+    'viewer.openFile': '📁 Open File (JSON / CSV)',
+    'viewer.empty': 'Select any exported JSON or CSV file to inspect and search its lists offline.',
+    'viewer.loadedInfo': 'File: {name}',
+    'compare.emptyPrompt': 'Pick a snapshot from History above, or select 1–2 JSON/CSV files to compare changes.',
+    'compare.pickFiles': '📁 Select 1 or 2 Files (JSON/CSV)',
+
     'sidebar.sync': 'Sync Target Profile',
     'sidebar.syncing': 'Syncing...',
     'sidebar.lastSynced': 'Last synced: {timestamp}',
@@ -210,6 +230,16 @@ const TRANSLATIONS = {
   es: {
     'app.title': 'IG Relations Analyzer',
     'app.titleWithUser': 'Relaciones: @{username}',
+
+    'tab.analysis': 'Análisis',
+    'tab.compare': 'Comparar',
+    'tab.viewer': 'Visor de Archivos',
+
+    'viewer.openFile': '📁 Abrir Archivo (JSON / CSV)',
+    'viewer.empty': 'Selecciona un archivo JSON o CSV exportado para inspeccionar y buscar en sus listas.',
+    'viewer.loadedInfo': 'Archivo: {name}',
+    'compare.emptyPrompt': 'Elige un registro del Historial arriba o selecciona 1–2 archivos JSON/CSV para comparar cambios.',
+    'compare.pickFiles': '📁 Elegir 1 o 2 Archivos (JSON/CSV)',
 
     'sidebar.sync': 'Sincronizar Perfil',
     'sidebar.syncing': 'Sincronizando...',

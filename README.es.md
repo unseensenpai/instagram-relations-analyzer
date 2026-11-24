@@ -8,6 +8,24 @@ Una extensión de Chrome ligera y centrada en la privacidad que analiza tus segu
 
 ---
 
+## Capturas de pantalla
+
+| Análisis de Perfil | Comparación e Historial |
+|---|---|
+| ![Análisis de Perfil](docs/screenshots/panel-overview.png) | ![Comparación e Historial](docs/screenshots/panel-compare.png) |
+
+---
+
+## Cómo funciona
+
+1. **Tres paneles dedicados** — Alterna entre **Análisis** (sincronización y listas del perfil), **Comparar** (cambios a lo largo del tiempo) y **Visor de Archivos** (inspección sin conexión de archivos JSON/CSV) sin mezclar datos de distintos perfiles.
+2. **Detección fiable de perfil** — Resuelve el usuario de la URL a su ID real de Instagram incluso tras navegaciones SPA o en subpáginas como `/reels/` o `/followers/`, evitando cachés desactualizadas.
+3. **Historial local (`IndexedDB`)** — Cada sincronización se guarda localmente en el navegador (hasta 20 registros por perfil). Selecciona cualquier fecha anterior en la barra de **Historial** para ver **Nuevos Seguidores**, **Dejaron de Seguirte**, **Nuevos Seguidos**, **Dejaste de Seguir** y **Cambios de Usuario**.
+4. **Comparación de archivos JSON y CSV** — Selecciona **1 archivo** para compararlo con el perfil sincronizado, o **2 archivos a la vez** (JSON+JSON, CSV+CSV o JSON+CSV) para compararlos sin conexión con botón **Invertir** y exportación de cambios.
+5. **Botón flotante minimizable** — Contrae el botón **📊 IG Relations** en la esquina superior derecha a un icono compacto cuando no lo necesites.
+
+---
+
 ## Características
 
 - **Analiza cualquier perfil** — No solo el tuyo: cualquier perfil público, o uno privado que sigas.

@@ -8,6 +8,24 @@ A lightweight, privacy-focused Chrome extension that analyzes your Instagram fol
 
 ---
 
+## Screenshots
+
+| Profile Analysis | Compare & History |
+|---|---|
+| ![Profile Analysis](docs/screenshots/panel-overview.png) | ![Compare & History](docs/screenshots/panel-compare.png) |
+
+---
+
+## How It Works
+
+1. **Three dedicated panels** — Switch cleanly between **Profile Analysis** (live profile sync & lists), **Compare** (diff changes over time), and **File Viewer** (inspect any exported JSON/CSV offline) without mixing profiles.
+2. **Authoritative profile resolution** — Resolves the active URL's username to its real Instagram user ID (even across SPA navigations and profile subpages like `/reels/` or `/followers/`) so cached results never leak across profiles.
+3. **Browser-local history (`IndexedDB`)** — Every sync is automatically stored locally (up to 20 snapshots per profile). Open the **Compare** tab, pick any previous snapshot from the History bar, and view **New Followers**, **Lost Followers**, **New Following**, **Unfollowed**, and **Username Changes** instantly.
+4. **External JSON & CSV compare** — Select **1 file** to compare against your current synced profile, or select **2 files at once** (JSON+JSON, CSV+CSV, or JSON+CSV) to compare them offline with one-click **Swap** and diff export.
+5. **Minimizable floating button** — Collapse the top-right **📊 IG Relations** trigger into a compact edge icon whenever you want it out of the way.
+
+---
+
 ## Features
 
 - **Analyze any profile** — Not just your own. Any public profile, or any private one you follow.

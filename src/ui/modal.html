@@ -2,52 +2,67 @@
   <div class="ig-relations-modal-window">
     <div class="ig-relations-modal-header">
       <h2 id="ig-relations-title" data-i18n="app.title">IG Relations Analyzer</h2>
-      <button id="ig-relations-close-btn">&times;</button>
+
+      <div class="ig-panel-tabs" role="tablist">
+        <button id="tab-analysis" class="ig-panel-tab active" data-panel="analysis" type="button">
+          <span data-i18n="tab.analysis">Profile Analysis</span>
+        </button>
+        <button id="tab-compare" class="ig-panel-tab" data-panel="compare" type="button">
+          <span data-i18n="tab.compare">Compare</span>
+        </button>
+        <button id="tab-viewer" class="ig-panel-tab" data-panel="viewer" type="button">
+          <span data-i18n="tab.viewer">File Viewer</span>
+        </button>
+      </div>
+
+      <button id="ig-relations-close-btn" type="button">&times;</button>
     </div>
 
     <div class="ig-relations-modal-body">
       <div class="ig-relations-sidebar">
-        <button id="btn-fetch-data" class="btn-primary" data-i18n="sidebar.sync">Sync Target Profile</button>
-        <button id="btn-compare-json" class="btn-secondary" data-i18n="compare.button">&#8644; Open / Compare (JSON/CSV)</button>
-        <input type="file" id="ig-compare-file-input" accept=".json,.csv,application/json,text/csv" multiple class="ig-relations-hidden" />
-        <div id="ig-cache-timestamp" class="ig-cache-info"></div>
-        <hr />
+        <!-- PANEL 1: PROFILE ANALYSIS -->
+        <div id="sidebar-panel-analysis" class="ig-sidebar-panel">
+          <button id="btn-fetch-data" class="btn-primary" data-i18n="sidebar.sync">Sync Target Profile</button>
+          <div id="ig-cache-timestamp" class="ig-cache-info"></div>
+          <hr />
 
-        <div class="ig-sidebar-filters">
-          <div class="ig-filter-row">
-            <button id="filter-following" class="btn-filter active">
-              <span data-i18n="filter.following">Following</span> (<span id="cnt-following">0</span>)
-            </button>
-            <button class="btn-download-list" data-list="following" data-i18n-title="sidebar.downloadList">&darr;</button>
-          </div>
-          <div class="ig-filter-row">
-            <button id="filter-followers" class="btn-filter">
-              <span data-i18n="filter.followers">Followers</span> (<span id="cnt-followers">0</span>)
-            </button>
-            <button class="btn-download-list" data-list="followers" data-i18n-title="sidebar.downloadList">&darr;</button>
-          </div>
-          <div class="ig-filter-row">
-            <button id="filter-not-following-back" class="btn-filter danger">
-              <span data-i18n="filter.notFollowingBack">Not Following Back</span> (<span id="cnt-not-back">0</span>)
-            </button>
-            <button class="btn-download-list" data-list="notFollowingBack"
-              data-i18n-title="sidebar.downloadList">&darr;</button>
-          </div>
-          <div class="ig-filter-row">
-            <button id="filter-i-not-following-back" class="btn-filter">
-              <span data-i18n="filter.iNotFollowingBack">You Don't Follow Back</span> (<span id="cnt-i-not-back">0</span>)
-            </button>
-            <button class="btn-download-list" data-list="iNotFollowingBack"
-              data-i18n-title="sidebar.downloadList">&darr;</button>
-          </div>
-
-          <div id="ig-compare-section" class="ig-compare-section ig-relations-hidden">
-            <hr />
-            <div class="ig-compare-section-header">
-              <span class="ig-export-label" data-i18n="compare.sectionTitle">Comparison</span>
-              <button id="btn-compare-clear-side" class="btn-compare-clear-link" data-i18n="compare.clear">Close</button>
+          <div class="ig-sidebar-filters">
+            <div class="ig-filter-row">
+              <button id="filter-following" class="btn-filter active">
+                <span data-i18n="filter.following">Following</span> (<span id="cnt-following">0</span>)
+              </button>
+              <button class="btn-download-list" data-list="following" data-i18n-title="sidebar.downloadList">&darr;</button>
             </div>
+            <div class="ig-filter-row">
+              <button id="filter-followers" class="btn-filter">
+                <span data-i18n="filter.followers">Followers</span> (<span id="cnt-followers">0</span>)
+              </button>
+              <button class="btn-download-list" data-list="followers" data-i18n-title="sidebar.downloadList">&darr;</button>
+            </div>
+            <div class="ig-filter-row">
+              <button id="filter-not-following-back" class="btn-filter danger">
+                <span data-i18n="filter.notFollowingBack">Not Following Back</span> (<span id="cnt-not-back">0</span>)
+              </button>
+              <button class="btn-download-list" data-list="notFollowingBack"
+                data-i18n-title="sidebar.downloadList">&darr;</button>
+            </div>
+            <div class="ig-filter-row">
+              <button id="filter-i-not-following-back" class="btn-filter">
+                <span data-i18n="filter.iNotFollowingBack">You Don't Follow Back</span> (<span id="cnt-i-not-back">0</span>)
+              </button>
+              <button class="btn-download-list" data-list="iNotFollowingBack"
+                data-i18n-title="sidebar.downloadList">&darr;</button>
+            </div>
+          </div>
+        </div>
 
+        <!-- PANEL 2: COMPARE -->
+        <div id="sidebar-panel-compare" class="ig-sidebar-panel ig-relations-hidden">
+          <button id="btn-compare-json" class="btn-primary" data-i18n="compare.pickFiles">&#128193; Select 1 or 2 Files (JSON/CSV)</button>
+          <input type="file" id="ig-compare-file-input" accept=".json,.csv,application/json,text/csv" multiple class="ig-relations-hidden" />
+          <hr />
+
+          <div id="ig-compare-section" class="ig-sidebar-filters">
             <div class="ig-filter-row">
               <button id="filter-cmp-new-followers" class="btn-filter compare-positive">
                 + <span data-i18n="compare.newFollowers">New Followers</span> (<span id="cnt-cmp-new-followers">0</span>)
@@ -56,7 +71,7 @@
                 data-i18n-title="sidebar.downloadList">&darr;</button>
             </div>
             <div class="ig-filter-row">
-              <button id="filter-cmp-lost-followers" class="btn-filter danger">
+              <button id="filter-cmp-lost-followers" class="btn-filter danger active">
                 &minus; <span data-i18n="compare.lostFollowers">Lost Followers</span> (<span id="cnt-cmp-lost-followers">0</span>)
               </button>
               <button class="btn-download-compare" data-compare-list="lostFollowers"
@@ -86,6 +101,42 @@
           </div>
         </div>
 
+        <!-- PANEL 3: FILE VIEWER -->
+        <div id="sidebar-panel-viewer" class="ig-sidebar-panel ig-relations-hidden">
+          <button id="btn-viewer-open" class="btn-primary" data-i18n="viewer.openFile">&#128193; Open File (JSON / CSV)</button>
+          <input type="file" id="ig-viewer-file-input" accept=".json,.csv,application/json,text/csv" class="ig-relations-hidden" />
+          <div id="ig-viewer-file-info" class="ig-cache-info"></div>
+          <hr />
+
+          <div class="ig-sidebar-filters">
+            <div class="ig-filter-row">
+              <button id="filter-viewer-following" class="btn-filter active">
+                <span data-i18n="filter.following">Following</span> (<span id="cnt-viewer-following">0</span>)
+              </button>
+              <button class="btn-download-viewer" data-viewer-list="following" data-i18n-title="sidebar.downloadList">&darr;</button>
+            </div>
+            <div class="ig-filter-row">
+              <button id="filter-viewer-followers" class="btn-filter">
+                <span data-i18n="filter.followers">Followers</span> (<span id="cnt-viewer-followers">0</span>)
+              </button>
+              <button class="btn-download-viewer" data-viewer-list="followers" data-i18n-title="sidebar.downloadList">&darr;</button>
+            </div>
+            <div class="ig-filter-row">
+              <button id="filter-viewer-not-back" class="btn-filter danger">
+                <span data-i18n="filter.notFollowingBack">Not Following Back</span> (<span id="cnt-viewer-not-back">0</span>)
+              </button>
+              <button class="btn-download-viewer" data-viewer-list="notFollowingBack" data-i18n-title="sidebar.downloadList">&darr;</button>
+            </div>
+            <div class="ig-filter-row">
+              <button id="filter-viewer-i-not-back" class="btn-filter">
+                <span data-i18n="filter.iNotFollowingBack">You Don't Follow Back</span> (<span id="cnt-viewer-i-not-back">0</span>)
+              </button>
+              <button class="btn-download-viewer" data-viewer-list="iNotFollowingBack" data-i18n-title="sidebar.downloadList">&darr;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SHARED FOOTER -->
         <div class="ig-export-footer">
           <label class="ig-export-label" for="ig-relations-language" data-i18n="sidebar.language">Language</label>
           <div class="ig-select-wrapper">

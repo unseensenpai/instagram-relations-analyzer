@@ -22,6 +22,8 @@ const CONFIG = {
 let profileCaches = {};
 // Oturum boyunca username -> { id, username, followersCount, followingCount } önbelleği
 const resolvedProfiles = new Map();
+// Aktif üst sekme: 'analysis' | 'compare' | 'viewer'
+let activePanel = 'analysis';
 let currentFilterKey = 'following';
 let isSyncing = false;
 let syncAbortController = null;
@@ -41,14 +43,16 @@ let compareSnapshot = null;
 // 2 dosya karşılaştırmasında "güncel/yeni" tarafı tutar; null ise aktif profil cache'i kullanılır
 let compareCurrentSnapshot = null;
 let compareDiff = null;
-let activeCompareKey = null;
-// Profil senkronize değilken tek bir JSON/CSV dosyasını doğrudan görselleştirmek için
-let standaloneFileData = null;
+let activeCompareKey = 'lostFollowers';
+// Dosya Görüntüleyici sekmesinin bağımsız verisi
+let viewerFileData = null;
+let viewerFilterKey = 'following';
 // Aktif profilin IndexedDB'deki geçmiş senkronizasyon kayıtları
 let profileHistory = [];
 
 const searchInput = document.getElementById('ig-relations-search');
 const compareFileInput = document.getElementById('ig-compare-file-input');
+const viewerFileInput = document.getElementById('ig-viewer-file-input');
 
 // Arama kutusunu ve terimi sıfırlar (listeyi yeniden çizmez)
 function clearSearch() {
@@ -105,6 +109,7 @@ function setupLanguageSelector() {
     // Liste öğelerindeki aksiyon butonları, geçmiş barı ve karşılaştırma banner'ı da çevrilmeli
     renderHistoryBar();
     refreshCompareBanner();
+    refreshViewerFileInfo();
     rerenderCurrentList();
     refreshCacheTimestamp();
   });
@@ -173,12 +178,13 @@ async function syncModalToCurrentUrl() {
     lastLoadedUserId = null;
     lastLoadedUsername = '';
     profileHistory = [];
-    standaloneFileData = null;
-    clearCompareState({ rerender: false });
+    if (!compareCurrentSnapshot) clearCompareState({ rerender: false });
     renderHistoryBar();
     document.getElementById('ig-relations-title').textContent = t('app.title');
     resetUI();
-    updateStatus(t('status.invalidProfile'), true);
+    if (activePanel === 'analysis') {
+      updateStatus(t('status.invalidProfile'), true);
+    }
     return;
   }
 
@@ -186,13 +192,14 @@ async function syncModalToCurrentUrl() {
   // eski profilin verisini ekrandan hemen temizle (eski analiz ekranda kalmasın).
   if (urlUsername.toLowerCase() !== lastLoadedUsername.toLowerCase()) {
     profileHistory = [];
-    standaloneFileData = null;
-    clearCompareState({ rerender: false });
+    if (!compareCurrentSnapshot) clearCompareState({ rerender: false });
     renderHistoryBar();
     resetUI();
     document.getElementById('ig-relations-title').textContent =
       t('app.titleWithUser', { username: urlUsername });
-    updateStatus(t('status.resolvingProfile', { username: urlUsername }));
+    if (activePanel === 'analysis') {
+      updateStatus(t('status.resolvingProfile', { username: urlUsername }));
+    }
   }
 
   const result = await resolveTargetProfile(urlUsername);
@@ -207,13 +214,14 @@ async function syncModalToCurrentUrl() {
     profileHistory = [];
     renderHistoryBar();
     resetUI();
-    updateStatus(t('status.profileResolveFailed', { username: urlUsername }), true);
+    if (activePanel === 'analysis') {
+      updateStatus(t('status.profileResolveFailed', { username: urlUsername }), true);
+    }
     return;
   }
 
   if (lastLoadedUserId && lastLoadedUserId !== CONFIG.targetUserId) {
-    clearCompareState({ rerender: false });
-    standaloneFileData = null;
+    if (!compareCurrentSnapshot) clearCompareState({ rerender: false });
   }
   lastLoadedUserId = CONFIG.targetUserId;
   lastLoadedUsername = CONFIG.targetUsername;
@@ -318,7 +326,6 @@ document.getElementById('btn-fetch-data').addEventListener('click', async () => 
     processRelations(syncUserId);
 
     updateStatus(t('status.saving'));
-    standaloneFileData = null;
     const saved = saveCacheData(syncUserId, syncUsername);
 
     // Yerel IndexedDB geçmişine anlık görüntü olarak kaydet
@@ -815,23 +822,20 @@ function resetUI() {
   updateDownloadButtons();
 }
 
-function getCurrentDataStore() {
-  return profileCaches[CONFIG.targetUserId] || standaloneFileData || null;
-}
-
 function updateUIElements() {
-  updateStatus('');
-  const currentCache = getCurrentDataStore();
+  const currentCache = profileCaches[CONFIG.targetUserId];
 
   if (currentCache) {
     document.getElementById('cnt-following').innerText = currentCache.following.length;
     document.getElementById('cnt-followers').innerText = currentCache.followers.length;
     document.getElementById('cnt-not-back').innerText = currentCache.notFollowingBack.length;
     document.getElementById('cnt-i-not-back').innerText = currentCache.iNotFollowingBack.length;
-  } else {
+    if (activePanel === 'analysis') updateStatus('');
+  } else if (activePanel === 'analysis') {
     resetUI();
   }
 
+  updateViewerCounts();
   updateCompareUI();
   updateDownloadButtons();
 }
@@ -839,7 +843,7 @@ function updateUIElements() {
 // Boş listelerin indirme ikonlarını pasifleştirir ki kullanıcı boş
 // dosya indirmeye çalışmasın.
 function updateDownloadButtons() {
-  const currentCache = getCurrentDataStore();
+  const currentCache = profileCaches[CONFIG.targetUserId];
 
   document.querySelectorAll('.btn-download-list').forEach(btn => {
     const users = currentCache ? currentCache[btn.dataset.list] : null;
@@ -851,8 +855,20 @@ function updateDownloadButtons() {
     btn.disabled = !users || users.length === 0;
   });
 
-  document.getElementById('btn-export-data').disabled = !currentCache;
-  // Dosya açma / 2 dosya karşılaştırma senkronizasyon yokken bile her zaman kullanılabilir
+  document.querySelectorAll('.btn-download-viewer').forEach(btn => {
+    const users = viewerFileData ? viewerFileData[btn.dataset.viewerList] : null;
+    btn.disabled = !users || users.length === 0;
+  });
+
+  const exportBtn = document.getElementById('btn-export-data');
+  if (activePanel === 'compare') {
+    exportBtn.disabled = !compareDiff;
+  } else if (activePanel === 'viewer') {
+    exportBtn.disabled = !viewerFileData;
+  } else {
+    exportBtn.disabled = !currentCache;
+  }
+
   document.getElementById('btn-compare-json').disabled = isSyncing;
 }
 
@@ -872,22 +888,53 @@ function filterUsersBySearch(users) {
 }
 
 function getActiveListUsers() {
-  if (activeCompareKey && compareDiff) {
-    return compareDiff[activeCompareKey] || [];
+  if (activePanel === 'compare') {
+    return compareDiff ? (compareDiff[activeCompareKey] || []) : [];
   }
-  const currentCache = getCurrentDataStore();
+  if (activePanel === 'viewer') {
+    return viewerFileData ? (viewerFileData[viewerFilterKey] || []) : [];
+  }
+  const currentCache = profileCaches[CONFIG.targetUserId];
   return currentCache ? (currentCache[currentFilterKey] || []) : [];
 }
 
-// Açık olan listeyi mevcut arama terimiyle yeniden çizer
+// Açık olan sekmenin listesini mevcut arama terimiyle yeniden çizer
 function rerenderCurrentList() {
-  if (activeCompareKey && compareDiff) {
+  if (activePanel === 'compare') {
+    if (!compareDiff) {
+      document.getElementById('ig-relations-user-list').innerHTML = '';
+      updateStatus(t('compare.emptyPrompt'));
+      return;
+    }
+    updateStatus('');
     renderList(compareDiff[activeCompareKey] || [], { compareKey: activeCompareKey });
     return;
   }
-  const currentCache = getCurrentDataStore();
+
+  if (activePanel === 'viewer') {
+    if (!viewerFileData) {
+      document.getElementById('ig-relations-user-list').innerHTML = '';
+      updateStatus(t('viewer.empty'));
+      return;
+    }
+    updateStatus('');
+    renderList(viewerFileData[viewerFilterKey] || [], { readOnly: true });
+    return;
+  }
+
+  const currentCache = profileCaches[CONFIG.targetUserId];
   if (currentCache) {
+    updateStatus('');
     renderList(currentCache[currentFilterKey] || []);
+  } else {
+    document.getElementById('ig-relations-user-list').innerHTML = '';
+    if (!CONFIG.targetUsername) {
+      updateStatus(t('status.invalidProfile'), true);
+    } else if (!CONFIG.targetUserId) {
+      updateStatus(t('status.profileResolveFailed', { username: CONFIG.targetUsername }), true);
+    } else {
+      updateStatus(t('status.noCache', { username: CONFIG.targetUsername }));
+    }
   }
 }
 
@@ -902,7 +949,7 @@ document.getElementById('ig-search-clear').addEventListener('click', () => {
   searchInput.focus();
 });
 
-function renderList(users, { compareKey = null } = {}) {
+function renderList(users, { compareKey = null, readOnly = false } = {}) {
   const listContainer = document.getElementById('ig-relations-user-list');
   listContainer.innerHTML = '';
 
@@ -929,8 +976,8 @@ function renderList(users, { compareKey = null } = {}) {
     return;
   }
 
-  const currentCache = compareCurrentSnapshot || getCurrentDataStore();
-  const isOfflineView = Boolean(compareCurrentSnapshot || (!profileCaches[CONFIG.targetUserId] && standaloneFileData));
+  const currentCache = compareCurrentSnapshot || profileCaches[CONFIG.targetUserId];
+  const isOfflineView = Boolean(readOnly || compareCurrentSnapshot || !profileCaches[CONFIG.targetUserId]);
   const currentFollowingIds = compareKey === 'lostFollowers' && currentCache
     ? new Set(currentCache.following.map(u => String(u.pk)))
     : null;
@@ -1132,25 +1179,52 @@ const compareFilters = [
   { id: 'filter-cmp-renamed', dataKey: 'renamed', countId: 'cnt-cmp-renamed' }
 ];
 
-function setActiveSidebarButton(buttonId) {
-  document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+const viewerFilters = [
+  { id: 'filter-viewer-following', dataKey: 'following', countId: 'cnt-viewer-following' },
+  { id: 'filter-viewer-followers', dataKey: 'followers', countId: 'cnt-viewer-followers' },
+  { id: 'filter-viewer-not-back', dataKey: 'notFollowingBack', countId: 'cnt-viewer-not-back' },
+  { id: 'filter-viewer-i-not-back', dataKey: 'iNotFollowingBack', countId: 'cnt-viewer-i-not-back' }
+];
+
+function setActiveInContainer(containerId, buttonId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
   const el = document.getElementById(buttonId);
   if (el) el.classList.add('active');
 }
+
+function switchPanel(panel) {
+  activePanel = panel;
+
+  document.querySelectorAll('.ig-panel-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.panel === panel);
+  });
+
+  document.getElementById('sidebar-panel-analysis').classList.toggle('ig-relations-hidden', panel !== 'analysis');
+  document.getElementById('sidebar-panel-compare').classList.toggle('ig-relations-hidden', panel !== 'compare');
+  document.getElementById('sidebar-panel-viewer').classList.toggle('ig-relations-hidden', panel !== 'viewer');
+
+  clearSearch();
+  renderHistoryBar();
+  refreshCompareBanner();
+  updateDownloadButtons();
+  rerenderCurrentList();
+}
+
+document.querySelectorAll('.ig-panel-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    switchPanel(tab.dataset.panel);
+  });
+});
 
 filters.forEach(filter => {
   const filterButton = document.getElementById(filter.id);
 
   filterButton.addEventListener('click', () => {
-    setActiveSidebarButton(filter.id);
+    setActiveInContainer('sidebar-panel-analysis', filter.id);
     currentFilterKey = filter.dataKey;
-    activeCompareKey = null;
-    refreshCompareBanner();
-
-    // Liste değişince arama sıfırlanır; önceki listede yazılan terimin
-    // yeni listede de uygulanması beklenmedik bir davranış olurdu.
     clearSearch();
-
     rerenderCurrentList();
   });
 });
@@ -1159,13 +1233,70 @@ compareFilters.forEach(filter => {
   const filterButton = document.getElementById(filter.id);
 
   filterButton.addEventListener('click', () => {
-    if (!compareDiff) return;
-    setActiveSidebarButton(filter.id);
+    setActiveInContainer('sidebar-panel-compare', filter.id);
     activeCompareKey = filter.dataKey;
     refreshCompareBanner();
     clearSearch();
     rerenderCurrentList();
   });
+});
+
+viewerFilters.forEach(filter => {
+  const filterButton = document.getElementById(filter.id);
+
+  filterButton.addEventListener('click', () => {
+    setActiveInContainer('sidebar-panel-viewer', filter.id);
+    viewerFilterKey = filter.dataKey;
+    clearSearch();
+    rerenderCurrentList();
+  });
+});
+
+// ======================== DOSYA GÖRÜNTÜLEYİCİ (VIEWER) ========================
+
+function updateViewerCounts() {
+  viewerFilters.forEach(({ dataKey, countId }) => {
+    document.getElementById(countId).innerText = viewerFileData ? (viewerFileData[dataKey]?.length || 0) : '0';
+  });
+}
+
+function refreshViewerFileInfo() {
+  const el = document.getElementById('ig-viewer-file-info');
+  if (!el) return;
+  el.textContent = viewerFileData
+    ? t('viewer.loadedInfo', { name: viewerFileData.sourceName })
+    : '';
+}
+
+document.getElementById('btn-viewer-open').addEventListener('click', () => {
+  viewerFileInput.value = '';
+  viewerFileInput.click();
+});
+
+viewerFileInput.addEventListener('change', async () => {
+  const file = viewerFileInput.files?.[0];
+  if (!file) return;
+
+  let rawText;
+  try {
+    rawText = await file.text();
+  } catch (err) {
+    console.error('IG Relations: failed to read viewer file', err);
+    updateStatus(t('compare.readError'), true);
+    return;
+  }
+
+  const parsed = parseSnapshotFile(rawText, file.name);
+  if (!parsed.ok) {
+    updateStatus(t(parsed.errorKey), true);
+    return;
+  }
+
+  viewerFileData = buildStandaloneStoreFromSnapshot(parsed.snapshot);
+  updateViewerCounts();
+  refreshViewerFileInfo();
+  updateDownloadButtons();
+  switchPanel('viewer');
 });
 
 // ======================== YEREL GEÇMİŞ BARI (HISTORY) ========================
@@ -1191,7 +1322,7 @@ function renderHistoryBar() {
   const compareBtn = document.getElementById('btn-history-compare');
   const deleteBtn = document.getElementById('btn-history-delete');
 
-  if (!profileHistory.length || !profileCaches[CONFIG.targetUserId]) {
+  if (activePanel !== 'compare' || !profileHistory.length || !profileCaches[CONFIG.targetUserId]) {
     bar.classList.add('ig-relations-hidden');
     return;
   }
@@ -1273,7 +1404,6 @@ function triggerCompareFilePicker() {
 document.getElementById('btn-compare-json').addEventListener('click', triggerCompareFilePicker);
 document.getElementById('btn-compare-change').addEventListener('click', triggerCompareFilePicker);
 document.getElementById('btn-compare-close').addEventListener('click', () => clearCompareState({ rerender: true }));
-document.getElementById('btn-compare-clear-side').addEventListener('click', () => clearCompareState({ rerender: true }));
 
 document.getElementById('btn-compare-swap').addEventListener('click', () => {
   if (!compareSnapshot || !compareCurrentSnapshot) return;
@@ -1320,14 +1450,11 @@ function activateCompareSession(previousSnap, currentSnap = null) {
 
   const targetFilter = compareFilters.find(f => f.dataKey === activeCompareKey);
   if (targetFilter) {
-    setActiveSidebarButton(targetFilter.id);
+    setActiveInContainer('sidebar-panel-compare', targetFilter.id);
   }
 
-  clearSearch();
-  updateStatus('');
   updateCompareUI();
-  updateDownloadButtons();
-  rerenderCurrentList();
+  switchPanel('compare');
 }
 
 compareFileInput.addEventListener('change', async () => {
@@ -1363,11 +1490,6 @@ compareFileInput.addEventListener('change', async () => {
     // Daha eski olanı "önceki", daha yeni olanı "güncel" kabul et
     parsedItems.sort((a, b) => a.time - b.time);
     const [older, newer] = parsedItems;
-    // Görselleştirme için yeni dosyayı arka planda görüntülenebilir tut
-    if (!profileCaches[CONFIG.targetUserId]) {
-      standaloneFileData = buildStandaloneStoreFromSnapshot(newer.snapshot);
-      updateUIElements();
-    }
     activateCompareSession(older.snapshot, newer.snapshot);
     return;
   }
@@ -1389,22 +1511,21 @@ compareFileInput.addEventListener('change', async () => {
     return;
   }
 
-  const currentData = getCurrentDataStore();
+  const currentData = profileCaches[CONFIG.targetUserId];
   if (currentData) {
-    // Mevcut senkronize (veya açık) veri varsa doğrudan onunla karşılaştır
+    // Mevcut senkronize profil verisi varsa onunla karşılaştır
     activateCompareSession(parsed.snapshot, null);
   } else {
-    // Henüz senkronize veri yoksa tek dosyayı görselleştirici modunda aç
-    standaloneFileData = buildStandaloneStoreFromSnapshot(parsed.snapshot);
-    clearCompareState({ rerender: false });
-    updateUIElements();
-    rerenderCurrentList();
-    updateStatus(t('compare.fileLoaded', { name: file.name }));
+    // Senkronize veri yoksa Dosya Görüntüleyici sekmesinde aç
+    viewerFileData = buildStandaloneStoreFromSnapshot(parsed.snapshot);
+    updateViewerCounts();
+    refreshViewerFileInfo();
+    switchPanel('viewer');
   }
 });
 
 function recomputeCompareDiff() {
-  const currentData = compareCurrentSnapshot || getCurrentDataStore();
+  const currentData = compareCurrentSnapshot || profileCaches[CONFIG.targetUserId];
   if (!compareSnapshot || !currentData) {
     compareDiff = null;
     return;
@@ -1413,16 +1534,8 @@ function recomputeCompareDiff() {
 }
 
 function updateCompareUI() {
-  const section = document.getElementById('ig-compare-section');
-  if (!compareSnapshot || !compareDiff) {
-    section.classList.add('ig-relations-hidden');
-    refreshCompareBanner();
-    return;
-  }
-
-  section.classList.remove('ig-relations-hidden');
   compareFilters.forEach(({ dataKey, countId }) => {
-    document.getElementById(countId).innerText = compareDiff[dataKey].length;
+    document.getElementById(countId).innerText = compareDiff ? compareDiff[dataKey].length : '0';
   });
 
   refreshCompareBanner();
@@ -1472,7 +1585,7 @@ function renderCompareVisualization() {
     chip.addEventListener('click', () => {
       const targetFilter = compareFilters.find(f => f.dataKey === seg.key);
       if (targetFilter) {
-        setActiveSidebarButton(targetFilter.id);
+        setActiveInContainer('sidebar-panel-compare', targetFilter.id);
         activeCompareKey = seg.key;
         refreshCompareBanner();
         clearSearch();
@@ -1488,7 +1601,7 @@ function refreshCompareBanner() {
   const banner = document.getElementById('ig-compare-banner');
   const swapBtn = document.getElementById('btn-compare-swap');
 
-  if (!compareSnapshot || !compareDiff || !activeCompareKey) {
+  if (activePanel !== 'compare' || !compareSnapshot || !compareDiff) {
     banner.classList.add('ig-relations-hidden');
     return;
   }
@@ -1566,11 +1679,9 @@ function clearCompareState({ rerender = true } = {}) {
   compareSnapshot = null;
   compareCurrentSnapshot = null;
   compareDiff = null;
-  activeCompareKey = null;
+  activeCompareKey = 'lostFollowers';
 
-  const currentNormalFilter = filters.find(f => f.dataKey === currentFilterKey) || filters[0];
-  setActiveSidebarButton(currentNormalFilter.id);
-
+  setActiveInContainer('sidebar-panel-compare', 'filter-cmp-lost-followers');
   updateCompareUI();
   updateDownloadButtons();
 
@@ -1594,7 +1705,7 @@ function getSelectedExportFormat() {
 // Her filtrenin yanındaki ⬇ ikonu: sadece o listeyi, seçili formatta indirir
 document.querySelectorAll('.btn-download-list').forEach(btn => {
   btn.addEventListener('click', () => {
-    const currentCache = getCurrentDataStore();
+    const currentCache = profileCaches[CONFIG.targetUserId];
     if (!currentCache) {
       alert(t('alert.noData'));
       return;
@@ -1608,8 +1719,34 @@ document.querySelectorAll('.btn-download-list').forEach(btn => {
     }
 
     const dateStr = new Date().toISOString().slice(0, 10);
-    const exportUser = CONFIG.targetUsername || 'snapshot';
+    const exportUser = CONFIG.targetUsername || 'profile';
     const baseName = `ig-${exportUser}-${listName}-${dateStr}`;
+
+    if (getSelectedExportFormat() === 'csv') {
+      downloadBlob(buildUsersCsv(users), `${baseName}.csv`, 'text/csv;charset=utf-8;');
+    } else {
+      downloadBlob(JSON.stringify(users, null, 2), `${baseName}.json`, 'application/json');
+    }
+  });
+});
+
+// Dosya Görüntüleyici sekmesindeki ⬇ ikonu
+document.querySelectorAll('.btn-download-viewer').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!viewerFileData) {
+      alert(t('alert.noData'));
+      return;
+    }
+
+    const listName = btn.dataset.viewerList;
+    const users = viewerFileData[listName] || [];
+    if (users.length === 0) {
+      alert(t('alert.emptyList'));
+      return;
+    }
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const baseName = `ig-viewer-${listName}-${dateStr}`;
 
     if (getSelectedExportFormat() === 'csv') {
       downloadBlob(buildUsersCsv(users), `${baseName}.csv`, 'text/csv;charset=utf-8;');
@@ -1704,16 +1841,21 @@ document.getElementById('btn-compare-export').addEventListener('click', () => {
   }
 });
 
-// "Tümünü İndir": dört listenin hepsini tek dosyada, seçili formatta
+// "Tümünü İndir": aktif sekmeye göre tüm listeleri veya fark raporunu indirir
 document.getElementById('btn-export-data').addEventListener('click', () => {
-  const currentCache = getCurrentDataStore();
+  if (activePanel === 'compare') {
+    document.getElementById('btn-compare-export').click();
+    return;
+  }
+
+  const currentCache = activePanel === 'viewer' ? viewerFileData : profileCaches[CONFIG.targetUserId];
   if (!currentCache) {
     alert(t('alert.noData'));
     return;
   }
 
   const dateStr = new Date().toISOString().slice(0, 10);
-  const exportUser = CONFIG.targetUsername || 'snapshot';
+  const exportUser = activePanel === 'viewer' ? 'viewer' : (CONFIG.targetUsername || 'profile');
   const baseName = `ig-${exportUser}-all-data-${dateStr}`;
 
   if (getSelectedExportFormat() === 'csv') {
