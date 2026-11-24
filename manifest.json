@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "IG Relations - Follower Analyzer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Compare Instagram followers and following lists to analyze your profile relations.",
   "permissions": [
     "activeTab",
@@ -19,7 +19,15 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["src/ui/modal.html", "src/ui/modal.css", "src/ui/modal.js", "src/ui/i18n.js"],
+      "resources": [
+        "src/ui/modal.html",
+        "src/ui/modal.css",
+        "src/ui/modal.js",
+        "src/ui/i18n.js",
+        "src/ui/compare.js",
+        "src/ui/history.js",
+        "src/ui/profile-url.js"
+      ],
       "matches": ["https://*.instagram.com/*"]
     }
   ]

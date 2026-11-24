@@ -4,7 +4,7 @@
 
 A lightweight, privacy-focused Chrome extension that analyzes your Instagram followers and following lists entirely inside your browser. No servers, no accounts, no data leaves your machine.
 
-![version](https://img.shields.io/badge/version-1.1.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![license](https://img.shields.io/badge/license-MIT-lightgrey)
+![version](https://img.shields.io/badge/version-1.2.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![license](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
 
@@ -18,7 +18,9 @@ A lightweight, privacy-focused Chrome extension that analyzes your Instagram fol
   - You Don't Follow Back — followers they haven't followed back
 - **Live search** — Filter the open list instantly by username or full name.
 - **Direct actions** — Unfollow or remove followers straight from the panel.
-- **Export** — Download any single list, or all four at once, as Excel-ready CSV or JSON.
+- **Compare & visualize (JSON / CSV)** — Compare your current relations against any previous JSON or CSV export, open a single file as an offline viewer, or select two files at once to visualize New Followers, Lost Followers, New Following, Unfollowed, and Username Changes.
+- **Browser-local history bar** — Every sync is automatically stored locally in `IndexedDB` (up to 20 snapshots per profile) so you can compare against any previous snapshot in one click without leaving the browser.
+- **Export** — Download any single list, all four at once, or full comparison diff reports as Excel-ready CSV or JSON.
 - **Local cache** — Results are stored per profile in `localStorage`, so reopening a profile loads instantly and shows the last sync time.
 - **Multilingual** — English, Turkish and Spanish. Auto-detects your browser language; switchable from the panel.
 - **Progress feedback** — Live counter, percentage and estimated time while syncing.
@@ -113,12 +115,15 @@ If Instagram rate-limits you, the panel shows a clear message and stops — wait
 
 ```
 src/
-├── content.js        # Injects the panel into instagram.com
+├── content.js          # Injects the panel into instagram.com
 └── ui/
-    ├── modal.html    # Panel markup
-    ├── modal.css     # Panel styles
-    ├── modal.js      # Panel logic: sync, compare, render, export
-    └── i18n.js       # Translations (en / tr / es)
+    ├── modal.html      # Panel markup
+    ├── modal.css       # Panel styles
+    ├── modal.js        # Panel logic: sync, compare, history, render, export
+    ├── compare.js      # JSON/CSV snapshot parser and diff engine
+    ├── history.js      # Browser-local IndexedDB snapshot history
+    ├── profile-url.js  # Instagram profile URL parser
+    └── i18n.js         # Translations (en / tr / es)
 ```
 
 **Adding a language:** add a block with the same keys to `TRANSLATIONS` in `src/ui/i18n.js` and register it in the `LANGUAGES` array. The panel picks it up automatically.

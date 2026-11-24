@@ -4,7 +4,7 @@
 
 Una extensión de Chrome ligera y centrada en la privacidad que analiza tus seguidores y seguidos de Instagram enteramente dentro de tu navegador. Sin servidores, sin cuentas, tus datos nunca salen de tu equipo.
 
-![versión](https://img.shields.io/badge/versi%C3%B3n-1.1.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![licencia](https://img.shields.io/badge/licencia-MIT-lightgrey)
+![versión](https://img.shields.io/badge/versi%C3%B3n-1.2.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![licencia](https://img.shields.io/badge/licencia-MIT-lightgrey)
 
 ---
 
@@ -18,7 +18,9 @@ Una extensión de Chrome ligera y centrada en la privacidad que analiza tus segu
   - No Sigues de Vuelta — seguidores a los que no sigue de vuelta
 - **Búsqueda en vivo** — Filtra la lista abierta al instante por usuario o nombre.
 - **Acciones directas** — Deja de seguir o elimina seguidores desde el propio panel.
-- **Exportación** — Descarga una lista concreta, o las cuatro a la vez, en CSV compatible con Excel o JSON.
+- **Comparación y visualización (JSON / CSV)** — Compara tus relaciones actuales con cualquier exportación JSON o CSV anterior, abre un solo archivo en modo visor o selecciona dos archivos a la vez para ver Nuevos Seguidores, Dejaron de Seguirte, Nuevos Seguidos, Dejaste de Seguir y Cambios de Usuario.
+- **Barra de historial local** — Cada sincronización se guarda automáticamente en `IndexedDB` dentro del navegador (hasta 20 registros por perfil) para comparar cambios con un solo clic.
+- **Exportación** — Descarga una lista concreta, las cuatro a la vez o el informe completo de cambios en CSV compatible con Excel o JSON.
 - **Caché local** — Los resultados se guardan por perfil en `localStorage`, así que al reabrir un perfil se cargan al instante y se muestra la última sincronización.
 - **Multiidioma** — Español, inglés y turco. Detecta el idioma del navegador y se puede cambiar desde el panel.
 - **Indicador de progreso** — Contador en vivo, porcentaje y tiempo estimado durante la sincronización.
@@ -113,12 +115,15 @@ Si Instagram te limita, el panel muestra un mensaje claro y se detiene — esper
 
 ```
 src/
-├── content.js        # Inyecta el panel en instagram.com
+├── content.js          # Inyecta el panel en instagram.com
 └── ui/
-    ├── modal.html    # Marcado del panel
-    ├── modal.css     # Estilos del panel
-    ├── modal.js      # Lógica: sincronización, comparación, renderizado, exportación
-    └── i18n.js       # Traducciones (en / tr / es)
+    ├── modal.html      # Marcado del panel
+    ├── modal.css       # Estilos del panel
+    ├── modal.js        # Lógica: sincronización, comparación, historial, exportación
+    ├── compare.js      # Analizador JSON/CSV y motor de diferencias
+    ├── history.js      # Historial local en IndexedDB
+    ├── profile-url.js  # Analizador de URLs de perfil de Instagram
+    └── i18n.js         # Traducciones (en / tr / es)
 ```
 
 **Añadir un idioma:** agrega un bloque con las mismas claves a `TRANSLATIONS` en `src/ui/i18n.js` y regístralo en el array `LANGUAGES`. El panel lo detecta automáticamente.

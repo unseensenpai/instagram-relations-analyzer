@@ -29,6 +29,8 @@ async function injectModal() {
 }
 
 function createFloatingButton() {
+  if (document.getElementById('ig-relations-float-trigger')) return;
+
   const btn = document.createElement('button');
   btn.id = 'ig-relations-float-trigger';
   btn.innerText = '📊 IG Relations';

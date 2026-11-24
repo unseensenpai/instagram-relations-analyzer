@@ -4,7 +4,7 @@
 
 Instagram takipçilerinizi ve takip ettiklerinizi tamamen tarayıcınızın içinde analiz eden, hafif ve gizlilik odaklı bir Chrome eklentisi. Sunucu yok, hesap yok, verileriniz bilgisayarınızdan çıkmıyor.
 
-![sürüm](https://img.shields.io/badge/s%C3%BCr%C3%BCm-1.1.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![lisans](https://img.shields.io/badge/lisans-MIT-lightgrey)
+![sürüm](https://img.shields.io/badge/s%C3%BCr%C3%BCm-1.2.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![lisans](https://img.shields.io/badge/lisans-MIT-lightgrey)
 
 ---
 
@@ -18,7 +18,9 @@ Instagram takipçilerinizi ve takip ettiklerinizi tamamen tarayıcınızın içi
   - Takip Etmediklerim — takip edenlerden geri takip edilmeyenler
 - **Canlı arama** — Açık listeyi kullanıcı adı veya isme göre anında filtreleyin.
 - **Doğrudan işlemler** — Panelden takibi bırakın veya takipçi çıkarın.
-- **Dışa aktarma** — Tek bir listeyi ya da dördünü birden, Excel uyumlu CSV veya JSON olarak indirin.
+- **Karşılaştırma ve görselleştirme (JSON / CSV)** — Güncel veriyi önceki bir JSON veya CSV dışa aktarımıyla karşılaştırın, tek dosyayı çevrimdışı görüntüleyici olarak açın ya da iki dosyayı birden seçip Yeni Takipçiler, Takibi Bırakanlar, Yeni Takip Edilenler, Takipten Çıkılanlar ve Kullanıcı Adı Değişenleri görsel grafikle inceleyin.
+- **Tarayıcı içi geçmiş barı** — Her senkronizasyon yerel `IndexedDB` depolamasına (profil başına en fazla 20 kayıt) otomatik kaydedilir; eski bir kaydı seçip tek tıkla fark analizi yapabilirsiniz.
+- **Dışa aktarma** — Tek bir listeyi, dördünü birden ya da tam karşılaştırma fark raporunu Excel uyumlu CSV veya JSON olarak indirin.
 - **Yerel önbellek** — Sonuçlar profil bazında `localStorage`'da saklanır; profili tekrar açtığınızda anında yüklenir ve son senkronizasyon zamanını gösterir.
 - **Çok dilli** — Türkçe, İngilizce ve İspanyolca. Tarayıcı dilinizi otomatik algılar, panelden değiştirilebilir.
 - **İlerleme göstergesi** — Senkronizasyon sırasında canlı sayaç, yüzde ve tahmini süre.
@@ -113,12 +115,15 @@ Instagram hız limiti uygularsa panel net bir mesaj gösterip durur — birkaç 
 
 ```
 src/
-├── content.js        # Paneli instagram.com sayfasına enjekte eder
+├── content.js          # Paneli instagram.com sayfasına enjekte eder
 └── ui/
-    ├── modal.html    # Panel işaretlemesi
-    ├── modal.css     # Panel stilleri
-    ├── modal.js      # Panel mantığı: senkronizasyon, karşılaştırma, listeleme, dışa aktarma
-    └── i18n.js       # Çeviriler (en / tr / es)
+    ├── modal.html      # Panel işaretlemesi
+    ├── modal.css       # Panel stilleri
+    ├── modal.js        # Panel mantığı: senkronizasyon, karşılaştırma, geçmiş, dışa aktarma
+    ├── compare.js      # JSON/CSV ayrıştırıcı ve fark (diff) motoru
+    ├── history.js      # Tarayıcı içi IndexedDB anlık görüntü geçmişi
+    ├── profile-url.js  # Instagram profil URL ayrıştırıcısı
+    └── i18n.js         # Çeviriler (en / tr / es)
 ```
 
 **Dil eklemek:** `src/ui/i18n.js` içindeki `TRANSLATIONS` nesnesine aynı anahtarlarla bir blok ekleyin ve `LANGUAGES` dizisine kaydedin. Panel otomatik olarak tanır.
