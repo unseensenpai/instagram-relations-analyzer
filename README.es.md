@@ -4,7 +4,7 @@
 
 Una extensión de Chrome ligera y centrada en la privacidad que analiza tus seguidores y seguidos de Instagram enteramente dentro de tu navegador. Sin servidores, sin cuentas, tus datos nunca salen de tu equipo.
 
-![versión](https://img.shields.io/badge/versi%C3%B3n-1.2.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![licencia](https://img.shields.io/badge/licencia-MIT-lightgrey)
+![versión](https://img.shields.io/badge/versi%C3%B3n-1.3.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![licencia](https://img.shields.io/badge/licencia-MIT-lightgrey)
 
 ---
 
@@ -13,6 +13,10 @@ Una extensión de Chrome ligera y centrada en la privacidad que analiza tus segu
 | Análisis de Perfil | Comparación e Historial |
 |---|---|
 | ![Análisis de Perfil](docs/screenshots/panel-overview.png) | ![Comparación e Historial](docs/screenshots/panel-compare.png) |
+
+### Informe HTML Interactivo (100% sin conexión)
+
+![Informe HTML Interactivo](docs/screenshots/html-report.png)
 
 ---
 
@@ -38,7 +42,7 @@ Una extensión de Chrome ligera y centrada en la privacidad que analiza tus segu
 - **Acciones directas** — Deja de seguir o elimina seguidores desde el propio panel.
 - **Comparación y visualización (JSON / CSV)** — Compara tus relaciones actuales con cualquier exportación JSON o CSV anterior, abre un solo archivo en modo visor o selecciona dos archivos a la vez para ver Nuevos Seguidores, Dejaron de Seguirte, Nuevos Seguidos, Dejaste de Seguir y Cambios de Usuario.
 - **Barra de historial local** — Cada sincronización se guarda automáticamente en `IndexedDB` dentro del navegador (hasta 20 registros por perfil) para comparar cambios con un solo clic.
-- **Exportación** — Descarga una lista concreta, las cuatro a la vez o el informe completo de cambios en CSV compatible con Excel o JSON.
+- **Exportación (HTML / CSV / JSON)** — Descarga una lista concreta, las cuatro a la vez o el informe completo de cambios como un **Informe HTML Interactivo** autocontenido (panel sin conexión con gráfico donut, métricas, búsqueda, vista Tarjetas/Tabla, tema oscuro/claro y lista de revisión), CSV compatible con Excel o JSON. Los informes HTML también incrustan el JSON para poder reimportarlos en **Comparar** o **Visor de Archivos**.
 - **Caché local** — Los resultados se guardan por perfil en `localStorage`, así que al reabrir un perfil se cargan al instante y se muestra la última sincronización.
 - **Multiidioma** — Español, inglés y turco. Detecta el idioma del navegador y se puede cambiar desde el panel.
 - **Indicador de progreso** — Contador en vivo, porcentaje y tiempo estimado durante la sincronización.
@@ -84,6 +88,7 @@ Luego sigue los pasos 3–5 anteriores y selecciona la carpeta clonada.
 |---|---|
 | **↓ junto a una lista** | Esa lista concreta, en el formato seleccionado |
 | **↓ Descargar Todo** | Las cuatro listas en un solo archivo |
+| **HTML (Informe Interactivo)** | Archivo `.html` autocontenido sin conexión con gráficos, búsqueda, orden, lista de revisión, tema oscuro/claro y JSON incrustado reimportable |
 | **Excel / CSV** | UTF-8 con BOM; se abre correctamente en Excel, incluidos los caracteres acentuados |
 | **JSON** | Datos estructurados con un bloque de resumen, ideal para procesamiento posterior |
 
@@ -140,6 +145,7 @@ src/
     ├── modal.js        # Lógica: sincronización, comparación, historial, exportación
     ├── compare.js      # Analizador JSON/CSV y motor de diferencias
     ├── history.js      # Historial local en IndexedDB
+    ├── html-export.js  # Generador de informes HTML interactivos sin conexión
     ├── profile-url.js  # Analizador de URLs de perfil de Instagram
     └── i18n.js         # Traducciones (en / tr / es)
 ```

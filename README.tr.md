@@ -4,7 +4,7 @@
 
 Instagram takipçilerinizi ve takip ettiklerinizi tamamen tarayıcınızın içinde analiz eden, hafif ve gizlilik odaklı bir Chrome eklentisi. Sunucu yok, hesap yok, verileriniz bilgisayarınızdan çıkmıyor.
 
-![sürüm](https://img.shields.io/badge/s%C3%BCr%C3%BCm-1.2.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![lisans](https://img.shields.io/badge/lisans-MIT-lightgrey)
+![sürüm](https://img.shields.io/badge/s%C3%BCr%C3%BCm-1.3.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![lisans](https://img.shields.io/badge/lisans-MIT-lightgrey)
 
 ---
 
@@ -13,6 +13,10 @@ Instagram takipçilerinizi ve takip ettiklerinizi tamamen tarayıcınızın içi
 | Profil Analizi | Karşılaştırma ve Geçmiş |
 |---|---|
 | ![Profil Analizi](docs/screenshots/panel-overview.png) | ![Karşılaştırma ve Geçmiş](docs/screenshots/panel-compare.png) |
+
+### İnteraktif HTML Rapor Dışa Aktarımı (%100 Çevrimdışı)
+
+![İnteraktif HTML Raporu](docs/screenshots/html-report.png)
 
 ---
 
@@ -38,7 +42,7 @@ Instagram takipçilerinizi ve takip ettiklerinizi tamamen tarayıcınızın içi
 - **Doğrudan işlemler** — Panelden takibi bırakın veya takipçi çıkarın.
 - **Karşılaştırma ve görselleştirme (JSON / CSV)** — Güncel veriyi önceki bir JSON veya CSV dışa aktarımıyla karşılaştırın, tek dosyayı çevrimdışı görüntüleyici olarak açın ya da iki dosyayı birden seçip Yeni Takipçiler, Takibi Bırakanlar, Yeni Takip Edilenler, Takipten Çıkılanlar ve Kullanıcı Adı Değişenleri görsel grafikle inceleyin.
 - **Tarayıcı içi geçmiş barı** — Her senkronizasyon yerel `IndexedDB` depolamasına (profil başına en fazla 20 kayıt) otomatik kaydedilir; eski bir kaydı seçip tek tıkla fark analizi yapabilirsiniz.
-- **Dışa aktarma** — Tek bir listeyi, dördünü birden ya da tam karşılaştırma fark raporunu Excel uyumlu CSV veya JSON olarak indirin.
+- **Dışa aktarma (HTML / CSV / JSON)** — Tek bir listeyi, dördünü birden ya da tam karşılaştırma fark raporunu tek dosyalık **İnteraktif HTML Raporu** (çevrimdışı grafik, oran içgörüleri, arama, Kart/Tablo görünümü, koyu/açık tema ve inceleme listesi), Excel uyumlu CSV veya JSON olarak indirin. HTML raporları gömülü JSON içerdiği için **Karşılaştır** ve **Dosya Görüntüleyici** sekmelerine geri yüklenebilir.
 - **Yerel önbellek** — Sonuçlar profil bazında `localStorage`'da saklanır; profili tekrar açtığınızda anında yüklenir ve son senkronizasyon zamanını gösterir.
 - **Çok dilli** — Türkçe, İngilizce ve İspanyolca. Tarayıcı dilinizi otomatik algılar, panelden değiştirilebilir.
 - **İlerleme göstergesi** — Senkronizasyon sırasında canlı sayaç, yüzde ve tahmini süre.
@@ -84,6 +88,7 @@ Ardından yukarıdaki 3–5. adımları izleyip klonladığınız klasörü seç
 |---|---|
 | **Listenin yanındaki ↓** | Sadece o liste, seçili biçimde |
 | **↓ Tümünü İndir** | Dört listenin tamamı tek dosyada |
+| **HTML (İnteraktif Rapor)** | Tek dosyalık çevrimdışı `.html` raporu; grafik, arama, sıralama, inceleme listesi, açık/koyu tema ve geri yüklenebilir gömülü JSON içerir |
 | **Excel / CSV** | BOM'lu UTF-8; Türkçe karakterler dahil Excel'de sorunsuz açılır |
 | **JSON** | Özet bloğu içeren yapılandırılmış veri, ileri işleme için ideal |
 
@@ -140,6 +145,7 @@ src/
     ├── modal.js        # Panel mantığı: senkronizasyon, karşılaştırma, geçmiş, dışa aktarma
     ├── compare.js      # JSON/CSV ayrıştırıcı ve fark (diff) motoru
     ├── history.js      # Tarayıcı içi IndexedDB anlık görüntü geçmişi
+    ├── html-export.js  # Tek dosyalık çevrimdışı interaktif HTML rapor üretici
     ├── profile-url.js  # Instagram profil URL ayrıştırıcısı
     └── i18n.js         # Çeviriler (en / tr / es)
 ```

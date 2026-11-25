@@ -4,6 +4,7 @@ Version history for IG Relations — Follower Analyzer.
 
 | Version | Date | Notes |
 |---|---|---|
+| [1.3.0](v1.3.0.md) | 2026-11-25 | Self-contained interactive HTML report export (offline insights, triage checklist, dark/light theme, HTML re-import) |
 | [1.2.0](v1.2.0.md) | 2026-11-24 | JSON/CSV comparison, browser-local IndexedDB history bar, file visualizer, SPA/URL & cache fixes |
 | [1.1.0](v1.1.0.md) | 2026-08-20 | Multilingual support, list search, sidebar export, sync reliability fixes |
 | [1.0.0](v1.0.0.md) | 2026-08-19 | Initial release |

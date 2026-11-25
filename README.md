@@ -4,7 +4,7 @@
 
 A lightweight, privacy-focused Chrome extension that analyzes your Instagram followers and following lists entirely inside your browser. No servers, no accounts, no data leaves your machine.
 
-![version](https://img.shields.io/badge/version-1.2.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![license](https://img.shields.io/badge/license-MIT-lightgrey)
+![version](https://img.shields.io/badge/version-1.3.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![license](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
 
@@ -13,6 +13,10 @@ A lightweight, privacy-focused Chrome extension that analyzes your Instagram fol
 | Profile Analysis | Compare & History |
 |---|---|
 | ![Profile Analysis](docs/screenshots/panel-overview.png) | ![Compare & History](docs/screenshots/panel-compare.png) |
+
+### Interactive HTML Report Export (100% Offline)
+
+![Interactive HTML Report](docs/screenshots/html-report.png)
 
 ---
 
@@ -38,7 +42,7 @@ A lightweight, privacy-focused Chrome extension that analyzes your Instagram fol
 - **Direct actions** — Unfollow or remove followers straight from the panel.
 - **Compare & visualize (JSON / CSV)** — Compare your current relations against any previous JSON or CSV export, open a single file as an offline viewer, or select two files at once to visualize New Followers, Lost Followers, New Following, Unfollowed, and Username Changes.
 - **Browser-local history bar** — Every sync is automatically stored locally in `IndexedDB` (up to 20 snapshots per profile) so you can compare against any previous snapshot in one click without leaving the browser.
-- **Export** — Download any single list, all four at once, or full comparison diff reports as Excel-ready CSV or JSON.
+- **Export (HTML / CSV / JSON)** — Download any single list, all four at once, or full comparison diff reports as a self-contained **Interactive HTML Report** (offline dashboard with donut chart, insights, search, Cards/Table views, dark/light theme, and review checklist), Excel-ready CSV, or JSON. Exported HTML reports also embed the snapshot JSON so they can be re-imported into **Compare** or **File Viewer**.
 - **Local cache** — Results are stored per profile in `localStorage`, so reopening a profile loads instantly and shows the last sync time.
 - **Multilingual** — English, Turkish and Spanish. Auto-detects your browser language; switchable from the panel.
 - **Progress feedback** — Live counter, percentage and estimated time while syncing.
@@ -84,6 +88,7 @@ Then follow steps 3–5 above, selecting the cloned folder.
 |---|---|
 | **↓ next to a list** | That single list, in the selected format |
 | **↓ Download All** | All four lists in one file |
+| **HTML (Interactive Report)** | Single self-contained offline `.html` dashboard with charts, search, sort, review checklist, dark/light theme, and embedded re-importable JSON |
 | **Excel / CSV** | UTF-8 with BOM, opens correctly in Excel including non-English characters |
 | **JSON** | Structured data with a summary block, ideal for further processing |
 
@@ -140,6 +145,7 @@ src/
     ├── modal.js        # Panel logic: sync, compare, history, render, export
     ├── compare.js      # JSON/CSV snapshot parser and diff engine
     ├── history.js      # Browser-local IndexedDB snapshot history
+    ├── html-export.js  # Self-contained offline interactive HTML report generator
     ├── profile-url.js  # Instagram profile URL parser
     └── i18n.js         # Translations (en / tr / es)
 ```

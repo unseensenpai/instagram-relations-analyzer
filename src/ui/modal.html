@@ -58,8 +58,8 @@
 
         <!-- PANEL 2: COMPARE -->
         <div id="sidebar-panel-compare" class="ig-sidebar-panel ig-relations-hidden">
-          <button id="btn-compare-json" class="btn-primary" data-i18n="compare.pickFiles">&#128193; Select 1 or 2 Files (JSON/CSV)</button>
-          <input type="file" id="ig-compare-file-input" accept=".json,.csv,application/json,text/csv" multiple class="ig-relations-hidden" />
+          <button id="btn-compare-json" class="btn-primary" data-i18n="compare.pickFiles">&#128193; Select 1 or 2 Files (JSON/CSV/HTML)</button>
+          <input type="file" id="ig-compare-file-input" accept=".json,.csv,.html,application/json,text/csv,text/html" multiple class="ig-relations-hidden" />
           <hr />
 
           <div id="ig-compare-section" class="ig-sidebar-filters">
@@ -103,8 +103,8 @@
 
         <!-- PANEL 3: FILE VIEWER -->
         <div id="sidebar-panel-viewer" class="ig-sidebar-panel ig-relations-hidden">
-          <button id="btn-viewer-open" class="btn-primary" data-i18n="viewer.openFile">&#128193; Open File (JSON / CSV)</button>
-          <input type="file" id="ig-viewer-file-input" accept=".json,.csv,application/json,text/csv" class="ig-relations-hidden" />
+          <button id="btn-viewer-open" class="btn-primary" data-i18n="viewer.openFile">&#128193; Open File (JSON / CSV / HTML)</button>
+          <input type="file" id="ig-viewer-file-input" accept=".json,.csv,.html,application/json,text/csv,text/html" class="ig-relations-hidden" />
           <div id="ig-viewer-file-info" class="ig-cache-info"></div>
           <hr />
 
@@ -147,6 +147,7 @@
           <label class="ig-export-label" for="ig-relations-export-type" data-i18n="sidebar.format">Format</label>
           <div class="ig-select-wrapper">
             <select id="ig-relations-export-type">
+              <option value="html" data-i18n="export.formatHtml">HTML (Interactive Report)</option>
               <option value="csv">Excel / CSV</option>
               <option value="json">JSON</option>
             </select>

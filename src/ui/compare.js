@@ -295,7 +295,21 @@ export function parseSnapshotCsv(rawText, fallbackName = '') {
 }
 
 /**
- * JSON veya CSV dosyasını uzantı ve içeriğe göre otomatik algılayıp ayrıştırır.
+ * Eklentinin ürettiği interaktif HTML raporunun içine gömülü JSON anlık görüntüsünü okur.
+ */
+export function parseSnapshotHtml(rawText, fallbackName = '') {
+  if (typeof rawText !== 'string') {
+    return { ok: false, errorKey: 'compare.invalidFile' };
+  }
+  const match = rawText.match(/<script[^>]*id=["']ig-relations-data["'][^>]*>([\s\S]*?)<\/script>/i);
+  if (!match?.[1]) {
+    return { ok: false, errorKey: 'compare.invalidFile' };
+  }
+  return parseSnapshotJson(match[1], fallbackName);
+}
+
+/**
+ * JSON, CSV veya eklenti HTML raporunu uzantı ve içeriğe göre otomatik algılayıp ayrıştırır.
  */
 export function parseSnapshotFile(rawText, fileName = '') {
   if (typeof rawText !== 'string' || !rawText.trim()) {
@@ -303,6 +317,13 @@ export function parseSnapshotFile(rawText, fileName = '') {
   }
 
   const trimmed = rawText.replace(/^\uFEFF/, '').trimStart();
+  const isHtmlExt = /\.html?$/i.test(fileName);
+  const looksLikeHtml = /^<!doctype\s+html/i.test(trimmed) || /^<html[\s>]/i.test(trimmed);
+
+  if (isHtmlExt || looksLikeHtml) {
+    return parseSnapshotHtml(rawText, fileName);
+  }
+
   const isJsonExt = /\.json$/i.test(fileName);
   const looksLikeJson = trimmed.startsWith('{') || trimmed.startsWith('[');
 

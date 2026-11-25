@@ -11,6 +11,7 @@ import {
   deleteProfileSnapshot
 } from './history.js';
 import { extractUsernameFromPathname } from './profile-url.js';
+import { buildProfileHtmlReport, buildCompareHtmlReport } from './html-export.js';
 
 const CONFIG = {
   appId: '936619743392459',
@@ -1699,7 +1700,7 @@ function clearCompareState({ rerender = true } = {}) {
 const EXPORT_LIST_KEYS = ['following', 'followers', 'notFollowingBack', 'iNotFollowingBack'];
 
 function getSelectedExportFormat() {
-  return document.getElementById('ig-relations-export-type').value; // 'csv' | 'json'
+  return document.getElementById('ig-relations-export-type').value; // 'html' | 'csv' | 'json'
 }
 
 // Her filtrenin yanındaki ⬇ ikonu: sadece o listeyi, seçili formatta indirir
@@ -1721,8 +1722,23 @@ document.querySelectorAll('.btn-download-list').forEach(btn => {
     const dateStr = new Date().toISOString().slice(0, 10);
     const exportUser = CONFIG.targetUsername || 'profile';
     const baseName = `ig-${exportUser}-${listName}-${dateStr}`;
+    const format = getSelectedExportFormat();
 
-    if (getSelectedExportFormat() === 'csv') {
+    if (format === 'html') {
+      const html = buildProfileHtmlReport({
+        targetUsername: CONFIG.targetUsername,
+        targetId: CONFIG.targetUserId,
+        exportedAt: new Date().toLocaleString(),
+        followers: listName === 'followers' ? users : [],
+        following: listName === 'following' ? users : [],
+        notFollowingBack: listName === 'notFollowingBack' ? users : [],
+        iNotFollowingBack: listName === 'iNotFollowingBack' ? users : [],
+        singleListKey: listName,
+        singleListLabel: t(`filter.${listName}`),
+        lang: getLanguage()
+      });
+      downloadBlob(html, `${baseName}.html`, 'text/html;charset=utf-8;');
+    } else if (format === 'csv') {
       downloadBlob(buildUsersCsv(users), `${baseName}.csv`, 'text/csv;charset=utf-8;');
     } else {
       downloadBlob(JSON.stringify(users, null, 2), `${baseName}.json`, 'application/json');
@@ -1747,8 +1763,24 @@ document.querySelectorAll('.btn-download-viewer').forEach(btn => {
 
     const dateStr = new Date().toISOString().slice(0, 10);
     const baseName = `ig-viewer-${listName}-${dateStr}`;
+    const format = getSelectedExportFormat();
 
-    if (getSelectedExportFormat() === 'csv') {
+    if (format === 'html') {
+      const cleanName = (viewerFileData.sourceName || '').replace(/^@/, '');
+      const html = buildProfileHtmlReport({
+        targetUsername: cleanName,
+        targetId: '',
+        exportedAt: new Date().toLocaleString(),
+        followers: listName === 'followers' ? users : [],
+        following: listName === 'following' ? users : [],
+        notFollowingBack: listName === 'notFollowingBack' ? users : [],
+        iNotFollowingBack: listName === 'iNotFollowingBack' ? users : [],
+        singleListKey: listName,
+        singleListLabel: t(`filter.${listName}`),
+        lang: getLanguage()
+      });
+      downloadBlob(html, `${baseName}.html`, 'text/html;charset=utf-8;');
+    } else if (format === 'csv') {
       downloadBlob(buildUsersCsv(users), `${baseName}.csv`, 'text/csv;charset=utf-8;');
     } else {
       downloadBlob(JSON.stringify(users, null, 2), `${baseName}.json`, 'application/json');
@@ -1774,8 +1806,23 @@ document.querySelectorAll('.btn-download-compare').forEach(btn => {
     const dateStr = new Date().toISOString().slice(0, 10);
     const exportUser = CONFIG.targetUsername || compareCurrentSnapshot?.targetUsername || compareSnapshot?.targetUsername || 'snapshot';
     const baseName = `ig-${exportUser}-compare-${listName}-${dateStr}`;
+    const format = getSelectedExportFormat();
 
-    if (getSelectedExportFormat() === 'csv') {
+    if (format === 'html') {
+      const comparisonLabel = compareCurrentSnapshot
+        ? `${formatSnapshotDisplayName(compareSnapshot)} → ${formatSnapshotDisplayName(compareCurrentSnapshot)}`
+        : formatSnapshotDisplayName(compareSnapshot);
+      const html = buildCompareHtmlReport({
+        targetUsername: exportUser,
+        targetId: CONFIG.targetUserId || compareCurrentSnapshot?.targetId || compareSnapshot?.targetId || '',
+        comparedAt: new Date().toLocaleString(),
+        comparisonLabel,
+        compareDiff,
+        singleCategoryKey: listName,
+        lang: getLanguage()
+      });
+      downloadBlob(html, `${baseName}.html`, 'text/html;charset=utf-8;');
+    } else if (format === 'csv') {
       const csv = listName === 'renamed'
         ? buildRenamedCsv(users)
         : buildUsersCsv(users);
@@ -1796,8 +1843,22 @@ document.getElementById('btn-compare-export').addEventListener('click', () => {
   const dateStr = new Date().toISOString().slice(0, 10);
   const exportUser = CONFIG.targetUsername || compareCurrentSnapshot?.targetUsername || compareSnapshot?.targetUsername || 'snapshot';
   const baseName = `ig-${exportUser}-compare-all-${dateStr}`;
+  const format = getSelectedExportFormat();
 
-  if (getSelectedExportFormat() === 'csv') {
+  if (format === 'html') {
+    const comparisonLabel = compareCurrentSnapshot
+      ? `${formatSnapshotDisplayName(compareSnapshot)} → ${formatSnapshotDisplayName(compareCurrentSnapshot)}`
+      : formatSnapshotDisplayName(compareSnapshot);
+    const html = buildCompareHtmlReport({
+      targetUsername: exportUser,
+      targetId: CONFIG.targetUserId || compareCurrentSnapshot?.targetId || compareSnapshot?.targetId || '',
+      comparedAt: new Date().toLocaleString(),
+      comparisonLabel,
+      compareDiff,
+      lang: getLanguage()
+    });
+    downloadBlob(html, `${baseName}.html`, 'text/html;charset=utf-8;');
+  } else if (format === 'csv') {
     let csvContent = '\uFEFF';
     COMPARE_LIST_KEYS.forEach((listName, index) => {
       const users = compareDiff[listName] || [];
@@ -1857,8 +1918,23 @@ document.getElementById('btn-export-data').addEventListener('click', () => {
   const dateStr = new Date().toISOString().slice(0, 10);
   const exportUser = activePanel === 'viewer' ? 'viewer' : (CONFIG.targetUsername || 'profile');
   const baseName = `ig-${exportUser}-all-data-${dateStr}`;
+  const format = getSelectedExportFormat();
 
-  if (getSelectedExportFormat() === 'csv') {
+  if (format === 'html') {
+    const html = buildProfileHtmlReport({
+      targetUsername: activePanel === 'viewer'
+        ? (viewerFileData.sourceName || '').replace(/^@/, '')
+        : CONFIG.targetUsername,
+      targetId: activePanel === 'viewer' ? '' : CONFIG.targetUserId,
+      exportedAt: new Date().toLocaleString(),
+      followers: currentCache.followers || [],
+      following: currentCache.following || [],
+      notFollowingBack: currentCache.notFollowingBack || [],
+      iNotFollowingBack: currentCache.iNotFollowingBack || [],
+      lang: getLanguage()
+    });
+    downloadBlob(html, `${baseName}.html`, 'text/html;charset=utf-8;');
+  } else if (format === 'csv') {
     // Her liste kendi başlığıyla, tek CSV dosyasında art arda bölümler
     // halinde yazılır (Excel'de tek sayfada okunur; her bölüm kendi
     // kolon başlıklarını taşır).
