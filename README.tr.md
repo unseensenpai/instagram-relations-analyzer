@@ -4,7 +4,7 @@
 
 Instagram takipçilerinizi ve takip ettiklerinizi tamamen tarayıcınızın içinde analiz eden, hafif ve gizlilik odaklı bir Chrome eklentisi. Sunucu yok, hesap yok, verileriniz bilgisayarınızdan çıkmıyor.
 
-![sürüm](https://img.shields.io/badge/s%C3%BCr%C3%BCm-1.3.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![lisans](https://img.shields.io/badge/lisans-MIT-lightgrey)
+![sürüm](https://img.shields.io/badge/s%C3%BCr%C3%BCm-1.3.1-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![lisans](https://img.shields.io/badge/lisans-MIT-lightgrey)
 
 ---
 

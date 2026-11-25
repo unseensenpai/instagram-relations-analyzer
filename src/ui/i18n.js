@@ -38,7 +38,7 @@ const TRANSLATIONS = {
     'filter.following': 'Takip Edilenler',
     'filter.followers': 'Takipçiler',
     'filter.notFollowingBack': 'Geri Takip Etmeyenler',
-    'filter.iNotFollowingBack': 'Takip Etmediklerim',
+    'filter.iNotFollowingBack': 'Takip Etmediği',
 
     'search.placeholder': 'Bu listede ara (kullanıcı adı veya isim)...',
     'search.clear': 'Aramayı temizle',
@@ -62,6 +62,7 @@ const TRANSLATIONS = {
     'status.comparing': 'Listeler karşılaştırılıyor...',
     'status.saving': 'Sonuçlar kaydediliyor...',
     'status.rendering': 'Liste hazırlanıyor ({count} kişi)...',
+    'status.partialWarning': 'Uyarı: Instagram API bazı hesapları eksik/tekrarlı döndürdü ({details}). Bazı ilişkiler kısmi görünebilir.',
 
     'error.rateLimit': 'Instagram istekleri geçici olarak sınırladı (rate limit). Birkaç dakika bekleyip tekrar deneyin.',
     'error.privateOrBlocked': 'Gizli profil veya Instagram tarafından engellendi. Listeye erişilemiyor.',
@@ -146,7 +147,7 @@ const TRANSLATIONS = {
     'filter.following': 'Following',
     'filter.followers': 'Followers',
     'filter.notFollowingBack': 'Not Following Back',
-    'filter.iNotFollowingBack': "You Don't Follow Back",
+    'filter.iNotFollowingBack': 'Not Followed Back',
 
     'search.placeholder': 'Search this list (username or name)...',
     'search.clear': 'Clear search',
@@ -170,6 +171,7 @@ const TRANSLATIONS = {
     'status.comparing': 'Comparing lists...',
     'status.saving': 'Saving results...',
     'status.rendering': 'Preparing list ({count} users)...',
+    'status.partialWarning': 'Warning: Instagram API returned partial/duplicate pages ({details}). Some relations may be incomplete.',
 
     'error.rateLimit': 'Instagram has temporarily rate-limited requests. Please wait a few minutes and try again.',
     'error.privateOrBlocked': 'Private profile or action blocked by Instagram. Cannot access list.',
@@ -254,7 +256,7 @@ const TRANSLATIONS = {
     'filter.following': 'Siguiendo',
     'filter.followers': 'Seguidores',
     'filter.notFollowingBack': 'No Te Siguen',
-    'filter.iNotFollowingBack': 'No Sigues de Vuelta',
+    'filter.iNotFollowingBack': 'No Seguidos de Vuelta',
 
     'search.placeholder': 'Buscar en esta lista (usuario o nombre)...',
     'search.clear': 'Borrar búsqueda',
@@ -278,6 +280,7 @@ const TRANSLATIONS = {
     'status.comparing': 'Comparando listas...',
     'status.saving': 'Guardando resultados...',
     'status.rendering': 'Preparando lista ({count} usuarios)...',
+    'status.partialWarning': 'Aviso: La API de Instagram devolvió páginas incompletas o duplicadas ({details}). Algunas relaciones pueden estar incompletas.',
 
     'error.rateLimit': 'Instagram ha limitado temporalmente las solicitudes. Espera unos minutos e inténtalo de nuevo.',
     'error.privateOrBlocked': 'Perfil privado o acción bloqueada por Instagram. No se puede acceder a la lista.',

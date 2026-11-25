@@ -303,7 +303,8 @@ document.getElementById('btn-fetch-data').addEventListener('click', async () => 
     followers: [],
     following: [],
     notFollowingBack: [],
-    iNotFollowingBack: []
+    iNotFollowingBack: [],
+    fetchMeta: null
   };
 
   // Profil başlığındaki "takip"/"takipçi" sayıları, ilerlemeyi yüzde
@@ -312,15 +313,27 @@ document.getElementById('btn-fetch-data').addEventListener('click', async () => 
   const totals = readProfileTotals(syncUsername);
 
   try {
-    const following = await fetchAllRelations(syncUserId, 'following', totals.following, signal);
-    if (following === null) return;
+    const followingRes = await fetchAllRelations(syncUserId, 'following', totals.following, signal);
+    if (followingRes === null) return;
 
-    const followers = await fetchAllRelations(syncUserId, 'followers', totals.followers, signal);
-    if (followers === null) return;
+    const followersRes = await fetchAllRelations(syncUserId, 'followers', totals.followers, signal);
+    if (followersRes === null) return;
 
-    // Bellekte ve JSON dışa aktarmada tutarlılık için hemen sadeleştiriyoruz
-    workingData.following = following.map(slimUser);
-    workingData.followers = followers.map(slimUser);
+    // Bellekte ve JSON dışa aktarmada tutarlılık için sadeleştirip tekilleştiriyoruz
+    workingData.following = dedupeUsers(followingRes.users.map(slimUser));
+    workingData.followers = dedupeUsers(followersRes.users.map(slimUser));
+    workingData.fetchMeta = {
+      following: {
+        ...followingRes.meta,
+        uniqueCount: workingData.following.length,
+        duplicateCount: Math.max(0, followingRes.meta.rawCount - workingData.following.length)
+      },
+      followers: {
+        ...followersRes.meta,
+        uniqueCount: workingData.followers.length,
+        duplicateCount: Math.max(0, followersRes.meta.rawCount - workingData.followers.length)
+      }
+    };
     profileCaches[syncUserId] = workingData;
 
     updateStatus(t('status.comparing'));
@@ -353,8 +366,11 @@ document.getElementById('btn-fetch-data').addEventListener('click', async () => 
     rerenderCurrentList();
     updateUIElements();
 
+    const partialWarn = buildPartialFetchWarning(workingData.fetchMeta);
     if (!saved) {
       updateStatus(t('error.cacheSaveFailed'), true);
+    } else if (partialWarn) {
+      updateStatus(partialWarn, true);
     }
   } finally {
     isSyncing = false;
@@ -614,23 +630,63 @@ function buildProgressMessage(label, fetchedCount, expectedTotal, hasMore, pageC
   });
 }
 
-// Başarıyla tamamlanırsa tam listeyi, herhangi bir hata/engel/iptal durumunda
+// Instagram'ın sayfalama sırasında aynı kullanıcıyı birden fazla kez
+// döndürmesine karşı pk (yoksa kullanıcı adı) bazlı tekilleştirme.
+function dedupeUsers(users) {
+  if (!Array.isArray(users)) return [];
+  const seen = new Set();
+  const result = [];
+  for (const user of users) {
+    if (!user) continue;
+    const key = user.pk
+      ? `pk:${String(user.pk)}`
+      : (user.username ? `u:${String(user.username).toLowerCase()}` : '');
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(user);
+  }
+  return result;
+}
+
+function buildPartialFetchWarning(fetchMeta) {
+  if (!fetchMeta) return '';
+  const issues = [];
+  const check = (meta, labelKey) => {
+    if (!meta) return;
+    const missingFromExpected = meta.expectedTotal && meta.uniqueCount < meta.expectedTotal - 2;
+    const hadDuplicates = meta.duplicateCount > 0 && meta.expectedTotal && meta.uniqueCount < meta.expectedTotal;
+    if (missingFromExpected || hadDuplicates) {
+      issues.push(`${t(labelKey)}: ${meta.uniqueCount}/${meta.expectedTotal}`);
+    }
+  };
+  check(fetchMeta.following, 'filter.following');
+  check(fetchMeta.followers, 'filter.followers');
+  if (issues.length === 0) return '';
+  return t('status.partialWarning', { details: issues.join(', ') });
+}
+
+// Başarıyla tamamlanırsa { users, meta }, herhangi bir hata/engel/iptal durumunda
 // `null` döner. `null`, çağıranın kısmi veriyi cache'e yazmasını
 // engellemek için kullanılan açık bir sinyaldir — asla sessizce
 // yutulmamalı ya da boş dizi ile karıştırılmamalıdır.
 async function fetchAllRelations(targetUserId, type, expectedTotal = null, signal = null) {
   const label = type === 'following' ? t('filter.following') : t('filter.followers');
   let list = [];
+  const seenKeys = new Set();
   let nextMaxId = '';
   let hasMore = true;
   let pageCount = 0;
+  // following için sabit kronolojik sıra (order=date_followed_latest) + count=200
+  // kullanmak Instagram'ın dinamik sıralama kaynaklı sayfa kayması/tekrarını önler.
+  let useStableOrder = type === 'following';
 
   updateStatus(t('status.fetching', { label }));
 
   while (hasMore) {
     if (signal?.aborted) return null;
 
-    const url = `https://www.instagram.com/api/v1/friendships/${targetUserId}/${type}/?count=50&max_id=${encodeURIComponent(nextMaxId)}`;
+    const orderParam = useStableOrder ? '&order=date_followed_latest' : '';
+    const url = `https://www.instagram.com/api/v1/friendships/${targetUserId}/${type}/?count=200${orderParam}&max_id=${encodeURIComponent(nextMaxId)}`;
     try {
       const response = await fetch(url, {
         signal,
@@ -639,6 +695,12 @@ async function fetchAllRelations(targetUserId, type, expectedTotal = null, signa
           'X-Requested-With': 'XMLHttpRequest'
         }
       });
+
+      // Bazı hesaplarda order parametresi 400 döndürürse ilk sayfada otomatik düşür
+      if (response.status === 400 && useStableOrder && pageCount === 0) {
+        useStableOrder = false;
+        continue;
+      }
 
       if (response.status === 429) {
         updateStatus(t('error.rateLimit'), true);
@@ -667,12 +729,17 @@ async function fetchAllRelations(targetUserId, type, expectedTotal = null, signa
       pageCount += 1;
       if (Array.isArray(data.users)) {
         list = list.concat(data.users);
+        for (const u of data.users) {
+          const k = u?.pk != null ? `pk:${String(u.pk)}` : (u?.username ? `u:${u.username.toLowerCase()}` : '');
+          if (k) seenKeys.add(k);
+        }
       }
 
-      nextMaxId = data.next_max_id || '';
-      hasMore = !!nextMaxId;
+      const prevMaxId = nextMaxId;
+      nextMaxId = data.next_max_id ? String(data.next_max_id) : '';
+      hasMore = !!nextMaxId && nextMaxId !== prevMaxId;
 
-      updateStatus(buildProgressMessage(label, list.length, expectedTotal, hasMore, pageCount));
+      updateStatus(buildProgressMessage(label, seenKeys.size, expectedTotal, hasMore, pageCount));
 
       if (hasMore) {
         await sleepWithAbort(PAGE_DELAY_MS, signal);
@@ -686,7 +753,15 @@ async function fetchAllRelations(targetUserId, type, expectedTotal = null, signa
       return null;
     }
   }
-  return list;
+  return {
+    users: list,
+    meta: {
+      expectedTotal,
+      rawCount: list.length,
+      uniqueCount: seenKeys.size,
+      duplicateCount: Math.max(0, list.length - seenKeys.size)
+    }
+  };
 }
 
 function processRelations(userId) {
@@ -722,11 +797,12 @@ function saveCacheData(userId, username = CONFIG.targetUsername) {
   const cacheObject = {
     username: username || '',
     timestamp: lastSyncedTimestamp,
+    fetchMeta: dataStore.fetchMeta || null,
     dataStore: {
-      followers: dataStore.followers.map(slimUser),
-      following: dataStore.following.map(slimUser),
-      notFollowingBack: dataStore.notFollowingBack.map(slimUser),
-      iNotFollowingBack: dataStore.iNotFollowingBack.map(slimUser)
+      followers: dedupeUsers(dataStore.followers.map(slimUser)),
+      following: dedupeUsers(dataStore.following.map(slimUser)),
+      notFollowingBack: dedupeUsers(dataStore.notFollowingBack.map(slimUser)),
+      iNotFollowingBack: dedupeUsers(dataStore.iNotFollowingBack.map(slimUser))
     }
   };
 
@@ -781,8 +857,14 @@ function loadCachedData() {
         throw new Error('Invalid cache structure');
       }
 
-      // Hafızadaki profileCaches havuzuna ilgili ID'yi kaydediyoruz
-      profileCaches[CONFIG.targetUserId] = cached.dataStore;
+      // Hafızadaki profileCaches havuzuna ilgili ID'yi kaydediyoruz (eski cache'lerdeki tekrarları temizleyerek)
+      profileCaches[CONFIG.targetUserId] = {
+        followers: dedupeUsers(cached.dataStore.followers),
+        following: dedupeUsers(cached.dataStore.following),
+        notFollowingBack: [],
+        iNotFollowingBack: [],
+        fetchMeta: cached.fetchMeta || null
+      };
 
       lastSyncedTimestamp = cached.timestamp || '';
       refreshCacheTimestamp();
@@ -1931,6 +2013,7 @@ document.getElementById('btn-export-data').addEventListener('click', () => {
       following: currentCache.following || [],
       notFollowingBack: currentCache.notFollowingBack || [],
       iNotFollowingBack: currentCache.iNotFollowingBack || [],
+      fetchMeta: currentCache.fetchMeta || null,
       lang: getLanguage()
     });
     downloadBlob(html, `${baseName}.html`, 'text/html;charset=utf-8;');

@@ -158,8 +158,11 @@ function detectCsvSection(line) {
 
   if (
     /^you don't follow back\b/.test(normalized) ||
+    /^not followed back\b/.test(normalized) ||
     /^takip etmediklerim\b/.test(normalized) ||
-    /^no sigues de vuelta\b/.test(normalized)
+    /^takip etmediği\b/.test(normalized) ||
+    /^no sigues de vuelta\b/.test(normalized) ||
+    /^no seguidos de vuelta\b/.test(normalized)
   ) {
     return 'iNotFollowingBack';
   }

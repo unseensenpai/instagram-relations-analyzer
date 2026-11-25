@@ -13,7 +13,7 @@ const REPORT_STRINGS = {
     followers: 'Takipçi',
     mutual: 'Karşılıklı',
     notFollowingBack: 'Geri Takip Etmeyen',
-    iNotFollowingBack: 'Takip Etmediğim',
+    iNotFollowingBack: 'Takip Etmediği',
     allUnique: 'Tümü (Tekil)',
     insightsTitle: 'İlişki Dağılımı & Özet',
     uniqueAccounts: 'Tekil Hesap',
@@ -41,9 +41,10 @@ const REPORT_STRINGS = {
     showingCount: '{shown} / {total} hesap gösteriliyor',
     badgeMutual: 'Karşılıklı',
     badgeNotBack: 'Geri Takip Etmiyor',
-    badgeINotBack: 'Takip Etmiyorum',
+    badgeINotBack: '{target} Takip Etmiyor',
     badgeFollowing: 'Takip Edilen',
     badgeFollowers: 'Takipçi',
+    partialWarning: 'Uyarı: Instagram API bu profilde bazı kayıtları eksik/tekrarlı döndürdü ({details}). Bazı ilişkiler kısmi görünebilir.',
     colAccount: 'Hesap',
     colStatus: 'Durum',
     colActions: 'İşlemler',
@@ -69,7 +70,7 @@ const REPORT_STRINGS = {
     followers: 'Followers',
     mutual: 'Mutual',
     notFollowingBack: 'Not Following Back',
-    iNotFollowingBack: "You Don't Follow Back",
+    iNotFollowingBack: 'Not Followed Back',
     allUnique: 'All Unique',
     insightsTitle: 'Relationship Breakdown & Insights',
     uniqueAccounts: 'Unique Accounts',
@@ -97,9 +98,10 @@ const REPORT_STRINGS = {
     showingCount: 'Showing {shown} of {total} accounts',
     badgeMutual: 'Mutual',
     badgeNotBack: 'Not Following Back',
-    badgeINotBack: "Don't Follow Back",
+    badgeINotBack: "{target} Doesn't Follow",
     badgeFollowing: 'Following',
     badgeFollowers: 'Follower',
+    partialWarning: 'Warning: Instagram API returned partial/duplicate pages ({details}). Some relations may be incomplete.',
     colAccount: 'Account',
     colStatus: 'Relation',
     colActions: 'Actions',
@@ -125,7 +127,7 @@ const REPORT_STRINGS = {
     followers: 'Seguidores',
     mutual: 'Mutuos',
     notFollowingBack: 'No Te Siguen',
-    iNotFollowingBack: 'No Sigues de Vuelta',
+    iNotFollowingBack: 'No Seguidos de Vuelta',
     allUnique: 'Todos (Únicos)',
     insightsTitle: 'Distribución y Resumen',
     uniqueAccounts: 'Cuentas Únicas',
@@ -153,9 +155,10 @@ const REPORT_STRINGS = {
     showingCount: 'Mostrando {shown} de {total} cuentas',
     badgeMutual: 'Mutuo',
     badgeNotBack: 'No Te Sigue',
-    badgeINotBack: 'No Sigues',
+    badgeINotBack: '{target} No Sigue',
     badgeFollowing: 'Siguiendo',
     badgeFollowers: 'Seguidor',
+    partialWarning: 'Aviso: La API de Instagram devolvió páginas incompletas o duplicadas ({details}). Algunas relaciones pueden estar incompletas.',
     colAccount: 'Cuenta',
     colStatus: 'Relación',
     colActions: 'Acciones',
@@ -863,6 +866,17 @@ function getSharedStyles() {
 
     .hidden { display: none !important; }
 
+    .partial-warning {
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      background: var(--inotback-bg);
+      color: var(--inotback);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
     @media (max-width: 780px) {
       .insights-panel { grid-template-columns: 1fr; }
       .cards-grid { grid-template-columns: 1fr; }
@@ -881,6 +895,7 @@ export function buildProfileHtmlReport({
   following = [],
   notFollowingBack = [],
   iNotFollowingBack = [],
+  fetchMeta = null,
   singleListKey = null,
   singleListLabel = '',
   lang = 'en'
@@ -890,6 +905,23 @@ export function buildProfileHtmlReport({
   const pageTitle = singleListLabel
     ? `${displayUser} — ${singleListLabel}`
     : `${displayUser} — ${S.reportTitle}`;
+
+  // Eksik/tekrarlı Instagram API yanıtı varsa raporda uyarı göster
+  let partialWarningText = '';
+  if (fetchMeta && !singleListKey) {
+    const issues = [];
+    const check = (meta, label) => {
+      if (!meta) return;
+      const missing = meta.expectedTotal && meta.uniqueCount < meta.expectedTotal - 2;
+      const dupes = meta.duplicateCount > 0 && meta.expectedTotal && meta.uniqueCount < meta.expectedTotal;
+      if (missing || dupes) issues.push(`${label}: ${meta.uniqueCount}/${meta.expectedTotal}`);
+    };
+    check(fetchMeta.following, S.following);
+    check(fetchMeta.followers, S.followers);
+    if (issues.length > 0) {
+      partialWarningText = S.partialWarning.replace('{details}', issues.join(', '));
+    }
+  }
 
   // Gömülü standart JSON anlık görüntüsü (eklentiye geri yüklenebilir)
   const embeddedSnapshot = {
@@ -945,6 +977,8 @@ export function buildProfileHtmlReport({
         ${targetUsername ? `<a class="btn btn-gradient" href="https://www.instagram.com/${encodeURIComponent(targetUsername)}/" target="_blank" rel="noopener noreferrer">${escapeHtmlText(S.openProfile)} ↗</a>` : ''}
       </div>
     </header>
+
+    ${partialWarningText ? `<div class="partial-warning">⚠ ${escapeHtmlText(partialWarningText)}</div>` : ''}
 
     <section class="kpi-grid" id="kpi-grid"></section>
 
@@ -1051,11 +1085,26 @@ export function buildProfileHtmlReport({
         applyTheme(next);
       });
 
-      // Deduplicate & classify
-      const followerKeys = new Set(followers.map(userKey));
-      const followingKeys = new Set(following.map(userKey));
+      // Deduplicate & classify (tekrarlı kayıtları temizleyerek tutarlı sayılar üret)
+      function dedupeList(arr) {
+        const seen = new Set();
+        const out = [];
+        arr.forEach(u => {
+          const k = userKey(u);
+          if (!seen.has(k)) {
+            seen.add(k);
+            out.push(u);
+          }
+        });
+        return out;
+      }
+
+      const uniqueFollowers = dedupeList(followers);
+      const uniqueFollowing = dedupeList(following);
+      const followerKeys = new Set(uniqueFollowers.map(userKey));
+      const followingKeys = new Set(uniqueFollowing.map(userKey));
       const uniqueMap = new Map();
-      [...following, ...followers, ...notFollowingBack, ...iNotFollowingBack].forEach(u => {
+      [...uniqueFollowing, ...uniqueFollowers, ...notFollowingBack, ...iNotFollowingBack].forEach(u => {
         const k = userKey(u);
         if (!uniqueMap.has(k)) {
           const isF = followerKeys.has(k);
@@ -1083,8 +1132,8 @@ export function buildProfileHtmlReport({
         mutual,
         notFollowingBack: notBackList,
         iNotFollowingBack: iNotBackList,
-        following: following.map(u => uniqueMap.get(userKey(u)) || { ...u, _key: userKey(u), _rel: 'following' }),
-        followers: followers.map(u => uniqueMap.get(userKey(u)) || { ...u, _key: userKey(u), _rel: 'followers' })
+        following: uniqueFollowing.map(u => uniqueMap.get(userKey(u)) || { ...u, _key: userKey(u), _rel: 'following' }),
+        followers: uniqueFollowers.map(u => uniqueMap.get(userKey(u)) || { ...u, _key: userKey(u), _rel: 'followers' })
       };
 
       // Reviewed state (localStorage)
@@ -1115,8 +1164,8 @@ export function buildProfileHtmlReport({
         if (cfg.singleListKey) return;
         const grid = document.getElementById('kpi-grid');
         const items = [
-          { key: 'following', label: S.following, count: following.length, color: '#38bdf8' },
-          { key: 'followers', label: S.followers, count: followers.length, color: '#a855f7' },
+          { key: 'following', label: S.following, count: datasets.following.length, color: '#38bdf8' },
+          { key: 'followers', label: S.followers, count: datasets.followers.length, color: '#a855f7' },
           { key: 'mutual', label: S.mutual, count: mutual.length, color: '#10b981' },
           { key: 'notFollowingBack', label: S.notFollowingBack, count: notBackList.length, color: '#f43f5e' },
           { key: 'iNotFollowingBack', label: S.iNotFollowingBack, count: iNotBackList.length, color: '#f59e0b' }
@@ -1199,8 +1248,8 @@ export function buildProfileHtmlReport({
 
       function renderMetrics() {
         if (cfg.singleListKey) return;
-        const reciprocity = following.length > 0 ? Math.round((mutual.length / following.length) * 100) : 0;
-        const ratio = following.length > 0 ? (followers.length / following.length).toFixed(2) + 'x' : '—';
+        const reciprocity = datasets.following.length > 0 ? Math.round((mutual.length / datasets.following.length) * 100) : 0;
+        const ratio = datasets.following.length > 0 ? (datasets.followers.length / datasets.following.length).toFixed(2) + 'x' : '—';
         const activeList = datasets[activeTab] || [];
         const reviewedInTab = activeList.filter(u => reviewedSet.has(u._key)).length;
         const reviewPct = activeList.length > 0 ? Math.round((reviewedInTab / activeList.length) * 100) : 0;
@@ -1214,7 +1263,7 @@ export function buildProfileHtmlReport({
           '<div class="metric-box">' +
             '<div class="metric-label">' + escapeHtml(S.followerRatio) + '</div>' +
             '<div class="metric-val">' + escapeHtml(ratio) + '</div>' +
-            '<div class="kpi-sub">' + followers.length.toLocaleString() + ' / ' + following.length.toLocaleString() + '</div>' +
+            '<div class="kpi-sub">' + datasets.followers.length.toLocaleString() + ' / ' + datasets.following.length.toLocaleString() + '</div>' +
           '</div>' +
           '<div class="metric-box">' +
             '<div class="metric-label">' + escapeHtml(S.triageProgress) + '</div>' +
@@ -1270,9 +1319,10 @@ export function buildProfileHtmlReport({
       }
 
       function badgeForRel(rel) {
+        const targetLabel = cfg.meta.targetUsername ? '@' + cfg.meta.targetUsername : 'Profile';
         if (rel === 'mutual') return { cls: 'badge-mutual', text: S.badgeMutual };
         if (rel === 'notFollowingBack') return { cls: 'badge-notback', text: S.badgeNotBack };
-        if (rel === 'iNotFollowingBack') return { cls: 'badge-inotback', text: S.badgeINotBack };
+        if (rel === 'iNotFollowingBack') return { cls: 'badge-inotback', text: S.badgeINotBack.replace('{target}', targetLabel) };
         if (rel === 'following') return { cls: 'badge-info', text: S.badgeFollowing };
         if (rel === 'followers') return { cls: 'badge-purple', text: S.badgeFollowers };
         return { cls: 'badge-info', text: cfg.singleListLabel || S.allUnique };

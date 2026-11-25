@@ -4,7 +4,7 @@
 
 Una extensión de Chrome ligera y centrada en la privacidad que analiza tus seguidores y seguidos de Instagram enteramente dentro de tu navegador. Sin servidores, sin cuentas, tus datos nunca salen de tu equipo.
 
-![versión](https://img.shields.io/badge/versi%C3%B3n-1.3.0-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![licencia](https://img.shields.io/badge/licencia-MIT-lightgrey)
+![versión](https://img.shields.io/badge/versi%C3%B3n-1.3.1-blue) ![manifest](https://img.shields.io/badge/manifest-v3-green) ![licencia](https://img.shields.io/badge/licencia-MIT-lightgrey)
 
 ---
 
